@@ -1140,33 +1140,27 @@ export default function DesignEditor({
                                                     </option>
                                                 ))}
                                         </select>
-                                        <Label>Image fit</Label>
-                                        <select
-                                            className="border-input bg-background h-9 w-full rounded-md border px-2"
-                                            value={String(
-                                                selected.props.objectFit ??
-                                                    'cover',
-                                            )}
-                                            disabled={
-                                                !canEdit || selected.locked
-                                            }
-                                            onChange={(event) =>
-                                                updateSelected({
-                                                    props: {
-                                                        ...selected.props,
-                                                        objectFit:
-                                                            event.target.value,
-                                                    },
-                                                })
-                                            }
-                                        >
-                                            <option value="cover">
-                                                Fill block (crop)
-                                            </option>
-                                            <option value="contain">
-                                                Fit inside block
-                                            </option>
-                                        </select>
+                                        {selected.type === 'video' && (
+                                            <>
+                                                <Label>Video fit</Label>
+                                                <select
+                                                    className="border-input bg-background h-9 w-full rounded-md border px-2"
+                                                    value={String(selected.props.objectFit ?? 'cover')}
+                                                    disabled={!canEdit || selected.locked}
+                                                    onChange={(event) =>
+                                                        updateSelected({
+                                                            props: {
+                                                                ...selected.props,
+                                                                objectFit: event.target.value,
+                                                            },
+                                                        })
+                                                    }
+                                                >
+                                                    <option value="cover">Fill block (crop)</option>
+                                                    <option value="contain">Fit inside block</option>
+                                                </select>
+                                            </>
+                                        )}
                                         {(selected.type === 'image' ||
                                             selected.type === 'logo') && (
                                             <Button

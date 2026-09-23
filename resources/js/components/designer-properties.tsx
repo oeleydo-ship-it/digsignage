@@ -141,6 +141,28 @@ export default function DesignerProperties({
             </div>
             {['image', 'logo'].includes(element.type) && (
                 <>
+                    <div className="space-y-1 text-xs">
+                        <span>Image framing</span>
+                        <div className="grid gap-2">
+                            <Button
+                                type="button"
+                                size="sm"
+                                variant={props.objectFit === 'contain' ? 'outline' : 'default'}
+                                onClick={() => onChange({ ...props, objectFit: 'cover', imageZoom: 1, imageX: 50, imageY: 50 })}
+                            >
+                                Fill block
+                            </Button>
+                            <Button
+                                type="button"
+                                size="sm"
+                                variant={props.objectFit === 'contain' ? 'default' : 'outline'}
+                                onClick={() => onChange({ ...props, objectFit: 'contain', imageZoom: 1, imageX: 50, imageY: 50 })}
+                            >
+                                Show full image
+                            </Button>
+                        </div>
+                        <p className="text-muted-foreground">Fill crops the edges; show full image keeps every edge visible.</p>
+                    </div>
                     <label className="block text-xs">
                         Image zoom inside block
                         <Input
