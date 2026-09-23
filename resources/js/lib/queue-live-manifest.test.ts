@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { applyQueueCallToManifest, manifestHasQueueWidgets, preserveQueueServingRows, queueSoundsFromManifest } from './queue-live-manifest';
+import { applyQueueCallToManifest, manifestHasQueueWidgets, manifestUsesQueueUpdate, preserveQueueServingRows, queueSoundsFromManifest } from './queue-live-manifest';
 import type { PlayerQueueUpdate } from './player-echo';
 import type { PlayerManifest } from './player-runtime';
 
@@ -122,6 +122,12 @@ describe('live queue call on player manifest', () => {
         expect(manifestHasQueueWidgets(board)).toBe(true);
         board.playback.playlist!.items[0].widget!.key = 'clock';
         expect(manifestHasQueueWidgets(board)).toBe(false);
+    });
+
+    it('ignores a team-wide call for a service not shown on this player', () => {
+        const board = manifest();
+        expect(manifestUsesQueueUpdate(board, update)).toBe(true);
+        expect(manifestUsesQueueUpdate(board, { ...update, service_id: 99 })).toBe(false);
     });
 
     it('updates queue widgets embedded in a design document', () => {

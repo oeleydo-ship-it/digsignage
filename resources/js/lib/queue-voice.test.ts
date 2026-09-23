@@ -27,6 +27,7 @@ function manifest(settings: Record<string, string | number | boolean>): PlayerMa
 class ControlledVoiceProvider implements QueueVoiceProvider {
     public readonly calls: string[] = [];
     public readonly finishes: Array<() => void> = [];
+    public playChime?: (volume: number) => Promise<void>;
     public active = 0;
     public maximumActive = 0;
     public cancelled = 0;
@@ -177,6 +178,40 @@ describe('queue voice announcements', () => {
         provider.finishNext();
         await Promise.resolve();
         expect(queue.enqueue('1', request('A105'))).toBe(false);
+    });
+
+    it('rings a new ticket immediately even while another announcement is speaking', () => {
+        const provider = new ControlledVoiceProvider();
+        const chimes: number[] = [];
+        provider.playChime = async (volume) => { chimes.push(volume); };
+        const queue = new QueueAnnouncementQueue(provider);
+
+        queue.enqueue('1', request('A105'));
+        expect(provider.calls).toEqual(['A105']);
+        expect(chimes).toEqual([1]);
+        expect(queue.enqueue('2', { ...request('A106'), soundOnly: true })).toBe(true);
+        expect(chimes).toEqual([1, 1]);
+        expect(provider.calls).toEqual(['A105']);
+        expect(queue.enqueue('2', { ...request('A106'), soundOnly: true })).toBe(false);
+        expect(queue.size).toBe(1);
+
+        provider.finishNext();
+    });
+
+    it('rings voice calls immediately but keeps their speech serialized', async () => {
+        const provider = new ControlledVoiceProvider();
+        const chimes: number[] = [];
+        provider.playChime = async (volume) => { chimes.push(volume); };
+        const queue = new QueueAnnouncementQueue(provider);
+
+        queue.enqueue('1', request('A105', 0));
+        queue.enqueue('2', request('A106', 0));
+        expect(chimes).toEqual([1, 1]);
+        expect(provider.calls).toEqual(['A105']);
+
+        provider.finishNext();
+        await vi.waitFor(() => expect(provider.calls).toEqual(['A105', 'A106']));
+        provider.finishNext();
     });
 
     it('suppresses duplicate calls and clears pending audio', () => {

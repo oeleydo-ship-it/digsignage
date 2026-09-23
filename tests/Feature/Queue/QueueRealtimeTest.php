@@ -31,7 +31,7 @@ class QueueRealtimeTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_queue_updates_target_only_players_showing_the_changed_service(): void
+    public function test_queue_updates_reach_paired_team_players_without_resolving_each_manifest(): void
     {
         $user = User::factory()->create();
         $team = $user->currentTeam;
@@ -39,6 +39,7 @@ class QueueRealtimeTest extends TestCase
         $billing = QueueService::factory()->create(['team_id' => $team->id]);
         $registrationScreen = $this->queueScreen($team->id, $registration->id, 'registration-player');
         $billingScreen = $this->queueScreen($team->id, $billing->id, 'billing-player');
+        $otherTeamScreen = Screen::factory()->paired()->create(['team_id' => User::factory()->create()->currentTeam->id]);
         Screen::factory()->paired()->create(['team_id' => $team->id]);
         $queueSettings = QueueSetting::resolveForTeam($team);
         $queueSettings->forceFill(['settings' => [
@@ -73,7 +74,8 @@ class QueueRealtimeTest extends TestCase
 
         $this->assertContains('queue.service.'.$registration->id, $channels);
         $this->assertContains('private-player.'.$registrationScreen->device_uuid, $channels);
-        $this->assertNotContains('private-player.'.$billingScreen->device_uuid, $channels);
+        $this->assertContains('private-player.'.$billingScreen->device_uuid, $channels);
+        $this->assertNotContains('private-player.'.$otherTeamScreen->device_uuid, $channels);
         $this->assertSame('R042', $event->broadcastWith()['ticket_number']);
         $this->assertSame('Counter Four', $event->broadcastWith()['counter_name']);
         $this->assertTrue($event->broadcastWith()['voice']['enabled']);

@@ -11,6 +11,7 @@ export type QueueVoiceRequest = {
 
 export interface QueueVoiceProvider {
     announce(request: QueueVoiceRequest): Promise<void>;
+    playChime?(volume: number): Promise<void>;
     cancel(): void;
 }
 
@@ -38,8 +39,23 @@ export class QueueAnnouncementQueue {
             return false;
         }
 
+        const immediateChime = request.settings.chime && this.provider.playChime !== undefined;
+        if (immediateChime) {
+            // Start the bell now; it must not wait behind a previous spoken
+            // announcement or the configured pause between announcements.
+            void this.provider.playChime!(request.settings.volume).catch(() => undefined);
+        }
+
+        if (request.soundOnly && immediateChime) {
+            this.remember(key);
+            return true;
+        }
+
         this.keys.add(key);
-        this.items.push({ key, request });
+        this.items.push({
+            key,
+            request: immediateChime ? { ...request, settings: { ...request.settings, chime: false } } : request,
+        });
         this.start();
 
         return true;
@@ -87,15 +103,19 @@ export class QueueAnnouncementQueue {
                 // A provider failure must not block later ticket calls.
             } finally {
                 this.keys.delete(item.key);
-                this.recentKeys.add(item.key);
-                if (this.recentKeys.size > 100) {
-                    this.recentKeys.delete(this.recentKeys.values().next().value ?? '');
-                }
+                this.remember(item.key);
             }
 
             if (this.items.length > 0 && generation === this.generation) {
                 await this.pause(item.request.settings.announcement_delay_seconds * 1000);
             }
+        }
+    }
+
+    private remember(key: string): void {
+        this.recentKeys.add(key);
+        if (this.recentKeys.size > 100) {
+            this.recentKeys.delete(this.recentKeys.values().next().value ?? '');
         }
     }
 
@@ -202,6 +222,10 @@ export class BrowserSpeechVoiceProvider implements QueueVoiceProvider {
         } catch {
             return false;
         }
+    }
+
+    playChime(volume: number): Promise<void> {
+        return this.bell(volume);
     }
 
     async announce({ ticketNumber, counterName, settings, soundOnly = false }: QueueVoiceRequest): Promise<void> {

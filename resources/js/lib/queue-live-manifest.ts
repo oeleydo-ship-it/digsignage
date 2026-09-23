@@ -208,6 +208,11 @@ function queueWidgets(manifest: PlayerManifest): WidgetPayload[] {
     return widgets;
 }
 
+/** Ignore team-wide queue broadcasts unrelated to this display's widgets. */
+export function manifestUsesQueueUpdate(manifest: PlayerManifest, update: PlayerQueueUpdate): boolean {
+    return queueWidgets(manifest).some((widget) => widget.key.startsWith('queue_') && matches(widget.settings, update));
+}
+
 /** Sound-only fallback for a new call discovered through REST manifest polling. */
 export function queueSoundsFromManifest(previous: PlayerManifest, next: PlayerManifest, now = Date.now()): Array<{ key: string; request: QueueVoiceRequest }> {
     // The manifest and ticket timestamps come from the same server clock.

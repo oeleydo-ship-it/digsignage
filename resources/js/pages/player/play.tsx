@@ -13,7 +13,7 @@ import {
     type PlayerCommand,
 } from '@/lib/player-commands';
 import { subscribePlayerCommands, type PlayerQueueUpdate, type ReverbConfig } from '@/lib/player-echo';
-import { applyQueueCallToManifest, manifestHasQueueWidgets, preserveQueueServingRows, queueSoundsFromManifest } from '@/lib/queue-live-manifest';
+import { applyQueueCallToManifest, manifestHasQueueWidgets, manifestUsesQueueUpdate, preserveQueueServingRows, queueSoundsFromManifest } from '@/lib/queue-live-manifest';
 import { serializePlayerRefresh } from '@/lib/player-sync';
 import {
     BrowserSpeechVoiceProvider,
@@ -1323,6 +1323,7 @@ export default function PlayerPlay({
             (update) => {
                 const announcementKey = `${update.ticket_id ?? ''}:${update.called_at ?? ''}`;
                 const currentManifest = manifestRef.current;
+                if (!currentManifest || !manifestUsesQueueUpdate(currentManifest, update)) return;
                 lastQueueUpdateAtRef.current = Date.now();
                 if (update.counter_id) {
                     if (update.status === 'called' || update.status === 'serving') {

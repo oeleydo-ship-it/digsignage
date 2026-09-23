@@ -33,7 +33,7 @@ class QueueUpdated implements ShouldBroadcastNow, ShouldDispatchAfterCommit
         $channels = [new Channel('queue.service.'.$this->serviceId)];
 
         try {
-            $screens = app(QueueDisplayScreenResolver::class)->forService($this->teamId, $this->serviceId);
+            $screens = app(QueueDisplayScreenResolver::class)->forTeam($this->teamId);
 
             foreach ($screens as $screen) {
                 $channels[] = new PrivateChannel('player.'.$screen->device_uuid);
