@@ -212,7 +212,7 @@ export class BrowserSpeechVoiceProvider implements QueueVoiceProvider {
             try {
                 await Promise.race([
                     this.bell(settings.volume),
-                    new Promise<void>((resolve) => window.setTimeout(resolve, 1_000)),
+                    new Promise<void>((resolve) => window.setTimeout(resolve, 700)),
                 ]);
             } catch {
                 // Browser autoplay policy may block Web Audio; speech can continue.
@@ -267,27 +267,34 @@ export class BrowserSpeechVoiceProvider implements QueueVoiceProvider {
 
     private async bell(volume: number): Promise<void> {
         const context = this.context();
-        if (!context || context.state === 'suspended') return;
+        if (!context) return;
+        if (context.state === 'suspended') {
+            await Promise.race([
+                context.resume().catch(() => undefined),
+                new Promise<void>((resolve) => window.setTimeout(resolve, 100)),
+            ]);
+            if (context.state === 'suspended') return;
+        }
         const loudness = Math.max(0, Math.min(1, volume));
-        const start = context.currentTime + 0.01;
+        const start = context.currentTime;
         let finalOscillator: OscillatorNode | null = null;
 
-        // Two soft strikes with decaying overtones sound like a bell rather
-        // than the old single-frequency ring/beep.
-        for (const [note, delay] of [[784, 0], [587.33, 0.28]]) {
-            for (const [multiple, level] of [[1, 0.14], [2.01, 0.045], [3.93, 0.012]]) {
+        // Strike immediately, then a softer second note. Short decaying
+        // overtones keep the cue audible without delaying the spoken call.
+        for (const [note, delay, strength] of [[784, 0, 1], [587.33, 0.18, 0.7]]) {
+            for (const [multiple, level] of [[1, 0.28], [2.01, 0.09], [3.93, 0.025]]) {
                 const oscillator = context.createOscillator();
                 const gain = context.createGain();
                 const strike = start + delay;
                 oscillator.type = 'sine';
                 oscillator.frequency.value = note * multiple;
                 gain.gain.setValueAtTime(0.0001, strike);
-                gain.gain.linearRampToValueAtTime(Math.max(0.0001, level * loudness), strike + 0.012);
-                gain.gain.exponentialRampToValueAtTime(0.0001, strike + 0.62);
+                gain.gain.linearRampToValueAtTime(Math.max(0.0001, level * strength * loudness), strike + 0.006);
+                gain.gain.exponentialRampToValueAtTime(0.0001, strike + 0.4);
                 oscillator.connect(gain);
                 gain.connect(context.destination);
                 oscillator.start(strike);
-                oscillator.stop(strike + 0.63);
+                oscillator.stop(strike + 0.41);
                 finalOscillator = oscillator;
             }
         }

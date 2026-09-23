@@ -49,6 +49,15 @@ php artisan migrate --force
 php artisan config:cache
 ```
 
+The first visit to Templates installs missing ready-made catalog records in
+the production database. It does not run `DatabaseSeeder`, which also creates
+a demo administrator. Catalog installation is repeatable and leaves existing
+platform and team templates unchanged. To populate optional stock photos and
+rendered thumbnails as well, run `php artisan db:seed
+--class=CatalogTemplateSeeder --force` during deployment; this separate seeder
+downloads images and may take time. Until then, missing catalog photos use a
+bundled gradient fallback; the layouts and live widgets are still usable.
+
 On a fresh production database with no platform administrator, the first visit
 redirects to the administrator registration form. Set a unique, random
 `INITIAL_ADMIN_SETUP_KEY` in the server's private `.env` before visiting it;

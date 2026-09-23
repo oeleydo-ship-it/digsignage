@@ -79,7 +79,7 @@ class TemplateTest extends TestCase
 
         $this->actingAs($user)
             ->withoutVite()
-            ->get(route('templates.index', $user->currentTeam))
+            ->get(route('templates.index', $user->currentTeam).'?search=Retail%20Menu')
             ->assertOk()
             ->assertInertia(fn ($page) => $page
                 ->component('templates/index')
@@ -101,11 +101,78 @@ class TemplateTest extends TestCase
 
         $this->actingAs($user)
             ->withoutVite()
-            ->get(route('templates.index', $user->currentTeam))
+            ->get(route('templates.index', $user->currentTeam).'?search=Hidden%20catalog')
             ->assertOk()
             ->assertInertia(fn ($page) => $page
                 ->component('templates/index')
                 ->has('templates.data', 0));
+    }
+
+    public function test_opening_templates_installs_missing_catalog_without_touching_team_templates(): void
+    {
+        $user = User::factory()->create();
+        $teamTemplate = Template::factory()->create(['team_id' => $user->currentTeam->id]);
+        $expected = count(CatalogTemplateLibrary::definitions());
+
+        $this->actingAs($user)
+            ->withoutVite()
+            ->get(route('templates.index', $user->currentTeam).'?scope=platform')
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('templates/index')
+                ->where('templates.total', $expected)
+                ->has('featured', count(CatalogTemplateLibrary::featuredKeys())));
+
+        $this->assertSame($expected, Template::query()->whereNull('team_id')->count());
+        $this->assertSame(TemplateStatus::Published, Template::query()->where('slug', 'lobby-welcome')->firstOrFail()->status);
+        $this->assertNull(Template::query()->where('slug', 'lobby-welcome')->firstOrFail()->thumbnail_path);
+        $this->assertNotNull($teamTemplate->fresh());
+
+        $this->actingAs($user)
+            ->withoutVite()
+            ->get(route('templates.index', $user->currentTeam))
+            ->assertOk();
+
+        $this->assertSame($expected, Template::query()->whereNull('team_id')->count());
+    }
+
+    public function test_catalog_installation_preserves_an_existing_platform_layout(): void
+    {
+        $user = User::factory()->create();
+        $existing = Template::factory()->platform()->published()->create([
+            'slug' => 'lobby-welcome',
+            'name' => 'Customized lobby',
+        ]);
+
+        $this->actingAs($user)
+            ->withoutVite()
+            ->get(route('templates.index', $user->currentTeam))
+            ->assertOk();
+
+        $this->assertSame('Customized lobby', $existing->fresh()->name);
+        $this->assertSame(
+            count(CatalogTemplateLibrary::definitions()),
+            Template::query()->whereNull('team_id')->count(),
+        );
+        $this->assertSame(1, Template::query()->where('slug', 'lobby-welcome')->count());
+    }
+
+    public function test_designer_starter_gallery_installs_catalog_on_first_visit(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->withoutVite()
+            ->get(route('designs.index', $user->currentTeam))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('designs/index')
+                ->has('starterTemplates', count(CatalogTemplateLibrary::featuredKeys())));
+
+        $this->assertSame(
+            count(CatalogTemplateLibrary::definitions()),
+            Template::query()->whereNull('team_id')->count(),
+        );
     }
 
     public function test_platform_admins_can_create_catalog_templates(): void

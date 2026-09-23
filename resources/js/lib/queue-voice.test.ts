@@ -100,7 +100,7 @@ describe('queue voice announcements', () => {
     });
 
     it('plays two bell strikes with decaying overtones without requiring speech synthesis', async () => {
-        const oscillators: Array<{ frequency: { value: number }; start: ReturnType<typeof vi.fn>; onended: (() => void) | null }> = [];
+        const oscillators: Array<{ frequency: { value: number }; start: ReturnType<typeof vi.fn>; stop: ReturnType<typeof vi.fn>; onended: (() => void) | null }> = [];
         class FakeAudioContext {
             currentTime = 0;
             destination = {};
@@ -126,6 +126,9 @@ describe('queue voice announcements', () => {
             784, 784 * 2.01, 784 * 3.93, 587.33, 587.33 * 2.01, 587.33 * 3.93,
         ]);
         expect(oscillators.every((oscillator) => oscillator.start.mock.calls.length === 1)).toBe(true);
+        expect(oscillators[0].start).toHaveBeenCalledWith(0);
+        expect(oscillators[3].start).toHaveBeenCalledWith(0.18);
+        expect(oscillators[5].stop).toHaveBeenCalledWith(0.59);
     });
 
     it('unlocks and previews the call bell after a user gesture', async () => {

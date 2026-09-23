@@ -17,6 +17,7 @@ use App\Models\Template;
 use App\Support\CatalogTemplateLibrary;
 use App\Support\ContentApprovalPresenter;
 use App\Support\DesignDocument;
+use App\Support\EnsureCatalogTemplates;
 use App\Widgets\WidgetRegistry;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -29,7 +30,7 @@ class DesignController extends Controller
     /**
      * Display a listing of designs.
      */
-    public function index(Request $request): Response
+    public function index(Request $request, EnsureCatalogTemplates $catalog): Response
     {
         Gate::authorize('viewAny', Design::class);
 
@@ -50,6 +51,7 @@ class DesignController extends Controller
         $starterTemplates = [];
 
         if (Gate::allows('viewAny', Template::class)) {
+            $catalog->handle();
             $starterTemplates = Template::query()
                 ->visibleTo($request->user(), $team)
                 ->whereNull('team_id')

@@ -52,18 +52,32 @@ export function DesignElementContent({
     }
 
     if ((element.type === 'image' || element.type === 'logo') && source) {
+        const zoom = Math.max(1, Math.min(4, Number(props.imageZoom ?? 1) || 1));
+        const x = Math.max(0, Math.min(100, Number(props.imageX ?? 50)));
+        const y = Math.max(0, Math.min(100, Number(props.imageY ?? 50)));
+
         return (
-            <img
-                src={source}
-                alt={element.name}
-                draggable={false}
-                className={commonMediaClass}
-                style={{
-                    objectFit: fit,
-                    objectPosition: `${Number(props.imageX ?? 50)}% ${Number(props.imageY ?? 50)}%`,
-                    transform: `scale(${Number(props.imageZoom ?? 1)})`,
-                }}
-            />
+            <div className="relative h-full w-full overflow-hidden">
+                <img
+                    src={source}
+                    alt={element.name}
+                    draggable={false}
+                    className="pointer-events-none absolute max-w-none select-none"
+                    onError={(event) => {
+                        if (source.startsWith('/images/catalog/') && !event.currentTarget.src.endsWith('/images/catalog-fallback.svg')) {
+                            event.currentTarget.src = '/images/catalog-fallback.svg';
+                        }
+                    }}
+                    style={{
+                        width: `${zoom * 100}%`,
+                        height: `${zoom * 100}%`,
+                        left: `${-(zoom - 1) * x}%`,
+                        top: `${-(zoom - 1) * y}%`,
+                        objectFit: fit,
+                        objectPosition: `${x}% ${y}%`,
+                    }}
+                />
+            </div>
         );
     }
 

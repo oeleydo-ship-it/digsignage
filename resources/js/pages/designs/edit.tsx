@@ -8,6 +8,7 @@ import ColorInput from '@/components/color-input';
 import DesignerImageUpload from '@/components/designer-image-upload';
 import { FullscreenCanvasPreview } from '@/components/canvas-preview';
 import DesignerProperties from '@/components/designer-properties';
+import { nextDesignLayer } from '@/lib/design-layers';
 import KonvaDesigner from '@/components/konva-designer';
 import { Button } from '@/components/ui/button';
 import {
@@ -312,9 +313,7 @@ export default function DesignEditor({
             height: Math.min(height, document.height),
             rotation: 0,
             opacity: 1,
-            zIndex:
-                Math.max(0, ...document.elements.map((item) => item.zIndex)) +
-                1,
+            zIndex: nextDesignLayer(document.elements),
             locked: false,
             hidden: false,
             props: mediaItem

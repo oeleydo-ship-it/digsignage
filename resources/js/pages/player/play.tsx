@@ -29,7 +29,6 @@ import {
     enqueueTelemetry,
     loadCurrentManifest,
     parseTelemetryQueue,
-    queueAnnouncementsAllowed,
     rememberPreEmergencyManifest,
     replaceTelemetryQueue,
     restorePreEmergencyManifest,
@@ -1083,7 +1082,7 @@ export default function PlayerPlay({
 
         const timer = window.setInterval(() => {
             void sync().catch(() => undefined);
-        }, 2_000);
+        }, 1_000);
 
         return () => window.clearInterval(timer);
     }, [pairing.status, online, queueBoardActive, sync]);
@@ -1326,10 +1325,8 @@ export default function PlayerPlay({
                 }
 
                 if (
-                    queueAnnouncementsAllowed(
-                        connectionStateRef.current,
-                        emergencyActiveRef.current,
-                    ) &&
+                    navigator.onLine &&
+                    !emergencyActiveRef.current &&
                     shouldAnnounceQueueCall(update) &&
                     currentManifest
                 ) {
@@ -1361,7 +1358,6 @@ export default function PlayerPlay({
                 if (state === 'reconnecting') {
                     setReverbConnected(false);
                     realtimeReconnectingRef.current = true;
-                    announcementQueueRef.current.clear();
                     updateConnectionState(
                         navigator.onLine ? 'reconnecting' : 'offline',
                     );
@@ -1371,7 +1367,6 @@ export default function PlayerPlay({
 
                 setReverbConnected(true);
                 realtimeReconnectingRef.current = false;
-                announcementQueueRef.current.clear();
                 updateConnectionState('reconnecting');
                 void reconnect().catch(() => {
                     updateConnectionState(

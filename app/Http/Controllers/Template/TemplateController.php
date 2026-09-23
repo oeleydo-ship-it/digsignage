@@ -16,6 +16,7 @@ use App\Models\Template;
 use App\Support\CatalogTemplateLibrary;
 use App\Support\ContentApprovalPresenter;
 use App\Support\DesignDocument;
+use App\Support\EnsureCatalogTemplates;
 use App\Widgets\WidgetRegistry;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -30,9 +31,11 @@ class TemplateController extends Controller
     /**
      * Display the template library.
      */
-    public function index(Request $request): Response
+    public function index(Request $request, EnsureCatalogTemplates $catalog): Response
     {
         Gate::authorize('viewAny', Template::class);
+
+        $catalog->handle();
 
         $user = $request->user();
         $team = $user->currentTeam;
