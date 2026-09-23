@@ -216,6 +216,14 @@ class QueueCounterController extends Controller
                 ])
                 ->values(),
             'permissions' => $request->user()->toQueuePermissions($team),
+            'reverb' => [
+                'enabled' => config('broadcasting.default') === 'reverb'
+                    && filled(config('broadcasting.connections.reverb.key')),
+                'key' => config('broadcasting.connections.reverb.key'),
+                'host' => config('broadcasting.connections.reverb.options.host') ?: 'localhost',
+                'port' => (int) (config('broadcasting.connections.reverb.options.port') ?: 8080),
+                'scheme' => config('broadcasting.connections.reverb.options.scheme') ?: 'http',
+            ],
         ]);
     }
 

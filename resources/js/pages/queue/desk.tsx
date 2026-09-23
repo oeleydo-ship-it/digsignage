@@ -1,7 +1,9 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
+import { subscribeQueueDashboardUpdates } from '@/lib/queue-echo';
+import type { ReverbConfig } from '@/lib/player-echo';
 import {
     Dialog,
     DialogContent,
@@ -35,6 +37,7 @@ type Props = {
     transferServices: QueueCounterServiceOption[];
     transferCounters: QueueDeskTransferCounter[];
     permissions: QueuePermissions;
+    reverb: ReverbConfig;
 };
 
 function stayOnPage() {
@@ -71,6 +74,7 @@ export default function QueueDesk({
     transferServices,
     transferCounters = [],
     permissions,
+    reverb,
 }: Props) {
     const { currentTeam } = usePage().props;
     const slug = currentTeam?.slug ?? '';
@@ -83,6 +87,37 @@ export default function QueueDesk({
     const [transferReason, setTransferReason] = useState('');
     const [errors, setErrors] = useState<Record<string, string>>({});
     const [callingNext, setCallingNext] = useState(false);
+    const actionInFlight = useRef(false);
+    const serviceKey = counter.services.map((service) => service.id).join(',');
+
+    useEffect(() => {
+        const serviceIds = serviceKey === '' ? [] : serviceKey.split(',').map(Number);
+        let stopped = false;
+        let unsubscribe: () => void = () => undefined;
+        let refreshTimer: number | undefined;
+        const refresh = () => {
+            window.clearTimeout(refreshTimer);
+            refreshTimer = window.setTimeout(() => {
+                if (actionInFlight.current) return;
+                router.reload({
+                    only: ['counter', 'current', 'waiting_count', 'held_count', 'average_wait_seconds'],
+                });
+            }, 150);
+        };
+
+        void subscribeQueueDashboardUpdates(serviceIds, reverb, refresh).then((cleanup) => {
+            if (stopped) cleanup();
+            else unsubscribe = cleanup;
+        });
+        const poll = window.setInterval(refresh, 5_000);
+
+        return () => {
+            stopped = true;
+            window.clearInterval(poll);
+            window.clearTimeout(refreshTimer);
+            unsubscribe();
+        };
+    }, [serviceKey, reverb.enabled, reverb.key, reverb.host, reverb.port, reverb.scheme]);
 
     useEffect(() => {
         setServingSeconds(
@@ -109,6 +144,7 @@ export default function QueueDesk({
         data: Record<string, number | string | null> = {},
     ) => {
         setErrors({});
+        actionInFlight.current = true;
         router.post(`/${slug}/queue/counters/${counter.id}/${path}`, data, {
             ...stayOnPage(),
             onStart: () => {
@@ -116,6 +152,7 @@ export default function QueueDesk({
             },
             onError: (next) => setErrors(next),
             onFinish: () => {
+                actionInFlight.current = false;
                 if (path === 'call-next') setCallingNext(false);
             },
         });

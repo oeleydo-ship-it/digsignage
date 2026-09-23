@@ -156,7 +156,7 @@ class QueueSnapshot
     }
 
     /**
-     * @return array{id: int, number: string, service: string, counter: string|null, status: string, called_at: string|null}
+     * @return array{id: int, number: string, service: string, counter: string|null, counter_id: int|null, status: string, called_at: string|null}
      */
     protected function ticketRow(QueueTicket $ticket): array
     {
@@ -165,6 +165,7 @@ class QueueSnapshot
             'number' => $ticket->number,
             'service' => $ticket->service->name,
             'counter' => $ticket->counter?->name ?? $ticket->counter?->code,
+            'counter_id' => $ticket->counter_id,
             'status' => $ticket->status->value,
             'called_at' => $ticket->called_at?->toIso8601String(),
         ];

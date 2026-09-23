@@ -158,6 +158,7 @@ class WidgetDataTest extends TestCase
 
         $this->assertSame('R004', $payload['data']['now_serving'][0]['number']);
         $this->assertSame('Desk 4', $payload['data']['now_serving'][0]['counter']);
+        $this->assertSame($counter->id, $payload['data']['now_serving'][0]['counter_id']);
         $this->assertSame(1, $payload['data']['stats']['waiting']);
         $this->assertSame(5, $payload['data']['estimated_wait_minutes']);
         $this->assertStringContainsString('/join/'.$team->slug, $payload['data']['join_url']);

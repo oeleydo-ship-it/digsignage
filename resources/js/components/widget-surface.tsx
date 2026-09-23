@@ -920,14 +920,6 @@ function queueRows(
         : [];
 }
 
-function wasJustCalled(row: Record<string, WidgetJsonValue>): boolean {
-    if (row.status !== 'called' && row.status !== 'serving') return false;
-    if (typeof row.called_at !== 'string') return false;
-
-    const age = Date.now() - Date.parse(row.called_at);
-    return Number.isFinite(age) && age >= -5_000 && age < 10_000;
-}
-
 function QueueWidgetSurface({
     widgetKey,
     settings,
@@ -968,6 +960,7 @@ function QueueWidgetSurface({
             : animation === 'slide'
               ? 'animate-[queue-slide_600ms_ease-out]'
               : '';
+    const highlightedTicketId = Number(data.highlight_ticket_id ?? 0);
     const rows =
         widgetKey === 'queue_recently_called'
             ? recentlyCalled
@@ -978,14 +971,17 @@ function QueueWidgetSurface({
     const ticketRows = (
         <div className="min-h-0 flex-1 space-y-2 overflow-hidden">
             {rows.length === 0 ? (
-                <p className="opacity-60" style={{ fontSize: rowSize }}>
-                    No tickets
-                </p>
+                <div className="opacity-60" style={{ fontSize: rowSize }}>
+                    <p>{widgetKey === 'queue_waiting_tickets' ? 'No one waiting' : 'No one serving'}</p>
+                    {widgetKey === 'queue_now_serving' && waiting[0]?.number && (
+                        <p style={{ fontSize: smallSize }}>Next waiting: {String(waiting[0].number)}</p>
+                    )}
+                </div>
             ) : (
                 rows.map((row, index) => (
                     <div
                         key={String(row.id ?? `${row.number}-${index}`)}
-                        className={`grid grid-cols-[1fr_auto] items-center gap-4 rounded-xl bg-white/10 px-4 py-2 ${widgetKey !== 'queue_waiting_tickets' && wasJustCalled(row) ? 'queue-call-blink' : ''}`}
+                        className={`grid grid-cols-[1fr_auto] items-center gap-4 rounded-xl bg-white/10 px-4 py-2 ${widgetKey !== 'queue_waiting_tickets' && Number(row.id) === highlightedTicketId ? 'queue-call-blink' : ''}`}
                         style={{ fontSize: rowSize }}
                     >
                         <div>
@@ -1033,7 +1029,7 @@ function QueueWidgetSurface({
                 )}
                 detail={String(nowServing[0]?.number ?? '')}
                 fontSize={fontSize}
-                highlight={nowServing[0] ? wasJustCalled(nowServing[0]) : false}
+                highlight={nowServing[0] ? Number(nowServing[0].id) === highlightedTicketId : false}
             />
         );
     } else if (widgetKey === 'queue_service_name') {
@@ -1094,7 +1090,23 @@ function QueueWidgetSurface({
     } else if (widgetKey === 'queue_board') {
         content = (
             <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,2fr)_minmax(0,1fr)] gap-4">
-                {ticketRows}
+                <div className="flex min-h-0 flex-col gap-4">
+                    <div className="flex min-h-0 flex-1 flex-col gap-2">
+                        <p className="text-left font-semibold uppercase opacity-70" style={{ fontSize: smallSize }}>Now serving</p>
+                        {ticketRows}
+                    </div>
+                    <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-auto">
+                        <p className="text-left font-semibold uppercase opacity-70" style={{ fontSize: smallSize }}>Waiting</p>
+                        {waiting.length === 0 ? (
+                            <p className="opacity-60" style={{ fontSize: smallSize }}>No one waiting</p>
+                        ) : waiting.map((row, index) => (
+                            <div key={String(row.id ?? `${row.number}-${index}`)} className="flex items-center justify-between rounded-xl bg-white/10 px-4 py-2" style={{ fontSize: smallSize }}>
+                                <span className="font-bold tabular-nums">{String(row.number ?? '—')}</span>
+                                <span>#{String(row.position ?? index + 1)}</span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
                 <QueueStats stats={stats} fontSize={fontSize} />
             </div>
         );

@@ -10,30 +10,45 @@ function matches(settings: WidgetPayload['settings'], update: PlayerQueueUpdate)
 }
 
 function updateWidget(widget: WidgetPayload | null | undefined, update: PlayerQueueUpdate): WidgetPayload | null | undefined {
-    if (!widget || widget.key !== 'queue_now_serving' || !matches(widget.settings, update)
+    if (!widget || !['queue_now_serving', 'queue_board', 'queue_counter_number', 'queue_recently_called', 'queue_ticker'].includes(widget.key)
+        || !matches(widget.settings, update)
         || !update.ticket_id || !update.ticket_number || !update.counter_name) {
         return widget;
     }
 
     const existing = Array.isArray(widget.data.now_serving) ? widget.data.now_serving : [];
-    const rows = existing.filter((value) => {
+    const previousAtCounter = existing.find((value) => value && typeof value === 'object' && !Array.isArray(value)
+        && (value.counter_id === update.counter_id || (value.counter_id == null && value.counter === update.counter_name)));
+    const rows = existing.filter((value): value is Record<string, import('@/types').WidgetJsonValue> => {
         if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
-        return value.id !== update.ticket_id && value.counter !== update.counter_name;
+        return value.id !== update.ticket_id
+            && value.counter_id !== update.counter_id
+            && !(value.counter_id == null && value.counter === update.counter_name);
     });
     const limit = Math.max(1, Math.min(20, Number(widget.settings.limit ?? 5) || 5));
+    const called = {
+        id: update.ticket_id,
+        number: update.ticket_number,
+        service: previousAtCounter && typeof previousAtCounter === 'object' && !Array.isArray(previousAtCounter)
+            ? String(previousAtCounter.service ?? '') : '',
+        counter: update.counter_name,
+        counter_id: update.counter_id,
+        status: 'called',
+        called_at: update.called_at,
+    };
+
+    const recentlyCalled = Array.isArray(widget.data.recently_called) ? widget.data.recently_called : [];
+    const recentRows = [called, ...recentlyCalled.filter((value) => value && typeof value === 'object' && !Array.isArray(value)
+        && value.id !== update.ticket_id)].slice(0, limit);
 
     return {
         ...widget,
         data: {
             ...widget.data,
-            now_serving: [{
-                id: update.ticket_id,
-                number: update.ticket_number,
-                service: '',
-                counter: update.counter_name,
-                status: 'called',
-                called_at: update.called_at,
-            }, ...rows].slice(0, limit),
+            now_serving: [called, ...rows].slice(0, limit),
+            recently_called: recentRows,
+            ticker: [called, ...rows].slice(0, limit).map((row) => `${String(row.number ?? '')} → ${String(row.counter ?? 'Desk')}`).join('   •   '),
+            highlight_ticket_id: update.ticket_id,
         },
     };
 }

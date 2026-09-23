@@ -62,6 +62,24 @@ describe('live queue call on player manifest', () => {
         expect(applyQueueCallToManifest(before, { ...update, service_id: 99 })).toBe(before);
     });
 
+    it('updates the combined board without replacing a different counter with the same name', () => {
+        const before = manifest();
+        const widget = before.playback.playlist!.items[0].widget!;
+        widget.key = 'queue_board';
+        widget.data.now_serving = [
+            { id: 10, number: 'REG004', counter: 'Desk', counter_id: 4 },
+            { id: 11, number: 'REG003', counter: 'Desk', counter_id: 5 },
+        ];
+
+        const after = applyQueueCallToManifest(before, { ...update, counter_name: 'Desk' });
+
+        expect(after.playback.playlist!.items[0].widget!.data.now_serving).toMatchObject([
+            { id: 12, number: 'REG005', counter_id: 4 },
+            { id: 11, number: 'REG003', counter_id: 5 },
+        ]);
+        expect(after.playback.playlist!.items[0].widget!.data.highlight_ticket_id).toBe(12);
+    });
+
     it('recognizes queue boards for fast polling when Reverb disconnects', () => {
         const board = manifest();
         expect(manifestHasQueueWidgets(board)).toBe(true);
