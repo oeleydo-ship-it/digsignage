@@ -18,6 +18,7 @@ use App\Models\QueueSetting;
 use App\Models\QueueTicket;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
@@ -225,6 +226,29 @@ class QueueCounterController extends Controller
                 'scheme' => config('broadcasting.connections.reverb.options.scheme') ?: 'http',
             ],
         ]);
+    }
+
+    /** Fresh, uncached queue counts for a desk that stays open all day. */
+    public function deskStatus(Request $request, string $current_team, QueueCounter $queueCounter): JsonResponse
+    {
+        Gate::authorize('operate', $queueCounter);
+        abort_unless($queueCounter->team_id === $request->user()->currentTeam->id, 403);
+        abort_unless($current_team === $request->user()->currentTeam->slug, 403);
+
+        $serviceIds = $queueCounter->services()->pluck('queue_services.id');
+
+        return response()->json([
+            'waiting_count' => $serviceIds->isEmpty() ? 0 : QueueTicket::query()
+                ->where('team_id', $queueCounter->team_id)
+                ->whereIn('queue_service_id', $serviceIds)
+                ->where('status', QueueTicketStatus::Waiting)
+                ->count(),
+            'held_count' => QueueTicket::query()
+                ->where('team_id', $queueCounter->team_id)
+                ->where('counter_id', $queueCounter->id)
+                ->where('status', QueueTicketStatus::OnHold)
+                ->count(),
+        ])->header('Cache-Control', 'no-store, private');
     }
 
     /**

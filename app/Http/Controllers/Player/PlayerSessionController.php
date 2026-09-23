@@ -43,7 +43,8 @@ class PlayerSessionController extends Controller
      */
     public function manifest(Request $request, BuildPlayerManifest $buildManifest): JsonResponse
     {
-        return response()->json($buildManifest->handle($this->screen($request)));
+        return response()->json($buildManifest->handle($this->screen($request)))
+            ->header('Cache-Control', 'no-store, private');
     }
 
     /**

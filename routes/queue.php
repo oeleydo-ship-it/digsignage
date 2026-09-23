@@ -23,6 +23,7 @@ Route::prefix('queue')->name('queue.')->middleware('plan.feature:queue_managemen
     Route::patch('counters/{queueCounter}', [QueueCounterController::class, 'update'])->name('counters.update');
     Route::delete('counters/{queueCounter}', [QueueCounterController::class, 'destroy'])->name('counters.destroy');
     Route::get('counters/{queueCounter}/desk', [QueueCounterController::class, 'desk'])->name('counters.desk');
+    Route::get('counters/{queueCounter}/desk/status', [QueueCounterController::class, 'deskStatus'])->name('counters.desk.status');
     Route::post('counters/{queueCounter}/call-next', [QueueCounterController::class, 'callNext'])->name('counters.call-next');
     Route::post('counters/{queueCounter}/recall', [QueueCounterController::class, 'recall'])->name('counters.recall');
     Route::post('counters/{queueCounter}/hold', [QueueCounterController::class, 'hold'])->name('counters.hold');

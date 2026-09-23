@@ -17,7 +17,6 @@ use App\Models\PlayerAnalyticsEvent;
 use App\Models\PlayerPlaybackEvent;
 use App\Models\Playlist;
 use App\Models\PlaylistItem;
-use App\Models\QueueTicket;
 use App\Models\Schedule;
 use App\Models\ScheduleTarget;
 use App\Models\Screen;
@@ -199,27 +198,6 @@ class PerformanceServiceProvider extends ServiceProvider
             }
         });
 
-        $queueChanged = function (QueueTicket $ticket): void {
-            if ($ticket->wasRecentlyCreated || $ticket->wasChanged([
-                'status',
-                'queue_position',
-                'queue_service_id',
-                'counter_id',
-                'called_at',
-            ])) {
-                PlayerManifestCache::bumpTeam($ticket->team_id);
-
-                // A player may fetch the new version before this transaction
-                // commits and cache a half-updated queue board. Invalidate that
-                // version again once the complete ticket transition is visible.
-                if (DB::transactionLevel() > 0) {
-                    DB::afterCommit(fn () => PlayerManifestCache::bumpTeam($ticket->team_id));
-                }
-            }
-        };
-
-        QueueTicket::saved($queueChanged);
-        QueueTicket::deleted(fn (QueueTicket $ticket) => PlayerManifestCache::bumpTeam($ticket->team_id));
     }
 
     /**

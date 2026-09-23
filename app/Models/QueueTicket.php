@@ -8,6 +8,7 @@ use App\Enums\QueueNotificationEvent;
 use App\Enums\QueueTicketSource;
 use App\Enums\QueueTicketStatus;
 use App\Events\QueueUpdated;
+use App\Support\PlayerManifestCache;
 use Database\Factories\QueueTicketFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
@@ -205,6 +206,13 @@ class QueueTicket extends Model
                 'counter_id',
                 'called_at',
             ])) {
+                // Invalidate before broadcasting. Otherwise a player can fetch
+                // the old manifest in response to this event and keep it.
+                PlayerManifestCache::bumpTeam($ticket->team_id);
+                if (DB::transactionLevel() > 0) {
+                    DB::afterCommit(fn () => PlayerManifestCache::bumpTeam($ticket->team_id));
+                }
+
                 event($ticket->queueUpdatedEvent($ticket->queue_service_id));
 
                 if ($ticket->wasChanged('queue_service_id')) {
@@ -233,6 +241,10 @@ class QueueTicket extends Model
         });
 
         static::deleted(function (QueueTicket $ticket): void {
+            PlayerManifestCache::bumpTeam($ticket->team_id);
+            if (DB::transactionLevel() > 0) {
+                DB::afterCommit(fn () => PlayerManifestCache::bumpTeam($ticket->team_id));
+            }
             event($ticket->queueUpdatedEvent($ticket->queue_service_id));
         });
     }

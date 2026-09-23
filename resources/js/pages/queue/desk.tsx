@@ -87,18 +87,46 @@ export default function QueueDesk({
     const [transferReason, setTransferReason] = useState('');
     const [errors, setErrors] = useState<Record<string, string>>({});
     const [callingNext, setCallingNext] = useState(false);
+    const [liveWaitingCount, setLiveWaitingCount] = useState(waiting_count);
+    const [liveHeldCount, setLiveHeldCount] = useState(held_count);
     const actionInFlight = useRef(false);
     const serviceKey = counter.services.map((service) => service.id).join(',');
+
+    useEffect(() => setLiveWaitingCount(waiting_count), [waiting_count]);
+    useEffect(() => setLiveHeldCount(held_count), [held_count]);
 
     useEffect(() => {
         const serviceIds = serviceKey === '' ? [] : serviceKey.split(',').map(Number);
         let stopped = false;
         let unsubscribe: () => void = () => undefined;
         let refreshTimer: number | undefined;
+        let statusRequest: AbortController | null = null;
+        const fetchStatus = () => {
+            if (stopped || actionInFlight.current || statusRequest) return;
+            const request = new AbortController();
+            statusRequest = request;
+            void fetch(`/${slug}/queue/counters/${counter.id}/desk/status`, {
+                headers: { Accept: 'application/json' },
+                cache: 'no-store',
+                signal: request.signal,
+            }).then(async (response) => {
+                if (!response.ok) return;
+                const status = await response.json() as { waiting_count: number; held_count: number };
+                if (!stopped && !actionInFlight.current) {
+                    setLiveWaitingCount(status.waiting_count);
+                    setLiveHeldCount(status.held_count);
+                }
+            }).catch(() => undefined).finally(() => {
+                if (statusRequest === request) statusRequest = null;
+            });
+        };
         const refresh = () => {
             window.clearTimeout(refreshTimer);
             refreshTimer = window.setTimeout(() => {
                 if (actionInFlight.current) return;
+                statusRequest?.abort();
+                statusRequest = null;
+                fetchStatus();
                 router.reload({
                     only: ['counter', 'current', 'waiting_count', 'held_count', 'average_wait_seconds'],
                 });
@@ -109,15 +137,17 @@ export default function QueueDesk({
             if (stopped) cleanup();
             else unsubscribe = cleanup;
         });
-        const poll = window.setInterval(refresh, 5_000);
+        fetchStatus();
+        const poll = window.setInterval(fetchStatus, 2_000);
 
         return () => {
             stopped = true;
             window.clearInterval(poll);
             window.clearTimeout(refreshTimer);
+            statusRequest?.abort();
             unsubscribe();
         };
-    }, [serviceKey, reverb.enabled, reverb.key, reverb.host, reverb.port, reverb.scheme]);
+    }, [slug, counter.id, serviceKey, reverb.enabled, reverb.key, reverb.host, reverb.port, reverb.scheme]);
 
     useEffect(() => {
         setServingSeconds(
@@ -252,7 +282,7 @@ export default function QueueDesk({
                             disabled={
                                 !permissions.canCallQueue ||
                                 Boolean(current) ||
-                                held_count === 0
+                                liveHeldCount === 0
                             }
                             data-test="queue-desk-resume"
                         >
@@ -297,11 +327,11 @@ export default function QueueDesk({
                     <div className="text-muted-foreground flex justify-between gap-3 rounded-xl border px-5 py-4 text-sm">
                         <span>
                             Waiting:{' '}
-                            <strong className="text-foreground">{waiting_count}</strong>
+                            <strong className="text-foreground">{liveWaitingCount}</strong>
                         </span>
                         <span>
                             Held:{' '}
-                            <strong className="text-foreground">{held_count}</strong>
+                            <strong className="text-foreground">{liveHeldCount}</strong>
                         </span>
                         <span>
                             Average wait:{' '}

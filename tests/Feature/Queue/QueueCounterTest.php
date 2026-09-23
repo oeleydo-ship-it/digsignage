@@ -257,6 +257,28 @@ class QueueCounterTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page->where('current.number', 'A002'));
     }
 
+    public function test_desk_status_reports_a_new_waiting_ticket_without_reloading_the_page(): void
+    {
+        $user = User::factory()->create();
+        $team = $user->currentTeam;
+        $service = QueueService::factory()->create(['team_id' => $team->id]);
+        $counter = QueueCounter::factory()->create(['team_id' => $team->id]);
+        $counter->services()->attach($service->id);
+
+        $this->actingAs($user)
+            ->getJson(route('queue.counters.desk.status', [$team, $counter]))
+            ->assertOk()
+            ->assertJsonPath('waiting_count', 0);
+
+        QueueTicket::factory()->forService($service)->create(['number' => 'A001']);
+
+        $this->actingAs($user)
+            ->getJson(route('queue.counters.desk.status', [$team, $counter]))
+            ->assertOk()
+            ->assertJsonPath('waiting_count', 1)
+            ->assertHeader('Cache-Control', 'no-store, private');
+    }
+
     public function test_call_next_keeps_the_current_ticket_when_nobody_is_waiting(): void
     {
         $user = User::factory()->create();

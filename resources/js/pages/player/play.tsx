@@ -923,6 +923,7 @@ export default function PlayerPlay({
 
         const response = await fetch('/api/player/v1/manifest', {
             headers: playerHeaders(token),
+            cache: 'no-store',
         });
 
         if (response.status === 401) {
@@ -1066,14 +1067,14 @@ export default function PlayerPlay({
     const queueBoardActive = manifestHasQueueWidgets(manifest);
 
     useEffect(() => {
-        if (pairing.status !== 'ready' || !online || !queueBoardActive || reverbConnected) return;
+        if (pairing.status !== 'ready' || !online || !queueBoardActive) return;
 
         const timer = window.setInterval(() => {
             void sync().catch(() => undefined);
         }, 2_000);
 
         return () => window.clearInterval(timer);
-    }, [pairing.status, online, queueBoardActive, reverbConnected, sync]);
+    }, [pairing.status, online, queueBoardActive, sync]);
 
     useEffect(() => {
         if (pairing.status !== 'ready' || !online) {

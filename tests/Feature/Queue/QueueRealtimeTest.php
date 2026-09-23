@@ -7,6 +7,7 @@ use App\Enums\ChannelType;
 use App\Enums\DesignStatus;
 use App\Enums\EmergencySeverity;
 use App\Enums\PlaylistItemType;
+use App\Enums\QueueTicketSource;
 use App\Enums\QueueTicketStatus;
 use App\Events\QueueUpdated;
 use App\Models\Channel;
@@ -95,6 +96,7 @@ class QueueRealtimeTest extends TestCase
         $before = $this->withToken($token)
             ->getJson('/api/player/v1/manifest')
             ->assertOk()
+            ->assertHeader('Cache-Control', 'no-store, private')
             ->json();
 
         QueueTicket::factory()->forService($service)->create([
@@ -166,6 +168,39 @@ class QueueRealtimeTest extends TestCase
         $this->assertNotSame($before['version'], $after['version']);
         $this->assertSame('A101', $nowServing[0]['number']);
         $this->assertSame('Counter One', $nowServing[0]['counter']);
+    }
+
+    public function test_printing_a_waiting_ticket_keeps_the_serving_ticket_on_the_monitor(): void
+    {
+        Event::fake([QueueUpdated::class]);
+
+        $user = User::factory()->create();
+        $team = $user->currentTeam;
+        $service = QueueService::factory()->create(['team_id' => $team->id]);
+        $counter = QueueCounter::factory()->create(['team_id' => $team->id]);
+        $counter->services()->attach($service);
+        $token = 'queue-kiosk-monitor-token';
+        $this->queueScreen($team->id, $service->id, 'kiosk-monitor-player', $token);
+
+        QueueTicket::factory()->forService($service)->create([
+            'number' => 'A001',
+            'status' => QueueTicketStatus::Serving,
+            'counter_id' => $counter->id,
+            'called_at' => now(),
+        ]);
+
+        $before = $this->withToken($token)->getJson('/api/player/v1/manifest')->assertOk()->json();
+        QueueTicket::factory()->forService($service)->create([
+            'number' => 'A002',
+            'source' => QueueTicketSource::Kiosk,
+        ]);
+        $after = $this->withToken($token)->getJson('/api/player/v1/manifest')->assertOk()->json();
+        $elements = collect($after['playback']['playlist']['items'][0]['document']['elements']);
+        $queue = $elements->firstWhere('type', 'queue_now_serving')['widget']['data'];
+
+        $this->assertNotSame($before['version'], $after['version']);
+        $this->assertSame('A001', $queue['now_serving'][0]['number']);
+        $this->assertSame('A002', $queue['waiting'][0]['number']);
     }
 
     public function test_advancing_one_counter_keeps_both_counters_visible_on_the_player(): void
