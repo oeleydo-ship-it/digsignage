@@ -2,6 +2,8 @@
 
 namespace Database\Factories;
 
+use App\Enums\PlanKey;
+use App\Enums\SubscriptionStatus;
 use App\Models\Team;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
@@ -24,7 +26,34 @@ class TeamFactory extends Factory
             'name' => $name,
             'slug' => Str::slug($name),
             'is_personal' => false,
+            'plan_key' => PlanKey::Enterprise,
+            'subscription_status' => SubscriptionStatus::Active,
+            'trial_ends_at' => null,
+            'bandwidth_used_bytes' => 0,
         ];
+    }
+
+    /**
+     * Starter plan with an active subscription.
+     */
+    public function starter(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'plan_key' => PlanKey::Starter,
+            'subscription_status' => SubscriptionStatus::Active,
+        ]);
+    }
+
+    /**
+     * Starter plan currently on a trial.
+     */
+    public function trialing(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'plan_key' => PlanKey::Starter,
+            'subscription_status' => SubscriptionStatus::Trialing,
+            'trial_ends_at' => now()->addDays((int) config('billing.trial_days', 14)),
+        ]);
     }
 
     /**

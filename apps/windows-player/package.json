@@ -1,0 +1,64 @@
+{
+    "name": "digsignage-windows-player",
+    "productName": "DigSignage Player",
+    "version": "1.0.0",
+    "private": true,
+    "description": "Windows kiosk player for DigSignage",
+    "author": "DigSignage",
+    "main": "src/main.cjs",
+    "scripts": {
+        "start": "electron .",
+        "dev": "electron . --server=http://127.0.0.1:8000",
+        "dist": "electron-builder --win"
+    },
+    "devDependencies": {
+        "electron": "^37.3.1",
+        "electron-builder": "^26.15.3"
+    },
+    "build": {
+        "appId": "com.digsignage.windows-player",
+        "productName": "DigSignage Player",
+        "copyright": "Copyright © DigSignage",
+        "directories": {
+            "output": "dist",
+            "buildResources": "build"
+        },
+        "files": [
+            "src/**/*",
+            "package.json"
+        ],
+        "extraMetadata": {
+            "name": "digsignage-windows-player",
+            "main": "src/main.cjs"
+        },
+        "win": {
+            "icon": "build/icon.ico",
+            "artifactName": "${productName}-${version}-${arch}.${ext}",
+            "target": [
+                {
+                    "target": "nsis",
+                    "arch": [
+                        "x64"
+                    ]
+                },
+                {
+                    "target": "portable",
+                    "arch": [
+                        "x64"
+                    ]
+                }
+            ]
+        },
+        "nsis": {
+            "oneClick": true,
+            "perMachine": false,
+            "allowToChangeInstallationDirectory": false,
+            "createDesktopShortcut": true,
+            "createStartMenuShortcut": true,
+            "shortcutName": "DigSignage Player"
+        },
+        "portable": {
+            "artifactName": "${productName}-${version}-portable.${ext}"
+        }
+    }
+}

@@ -3,6 +3,7 @@
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="referrer" content="origin">
 
         {{-- Inline script to detect system dark mode preference and apply it immediately --}}
         <script>
@@ -22,7 +23,7 @@
         {{-- Inline style to set the HTML background color based on our theme in app.css --}}
         <style>
             html {
-                background-color: oklch(1 0 0);
+                background-color: oklch(0.965 0.006 250);
             }
 
             html.dark {

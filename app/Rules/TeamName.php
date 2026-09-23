@@ -190,6 +190,7 @@ class TeamName implements ValidationRule
                 'invoice',
                 'invoices',
                 'issues',
+                'platform',
                 'jobs',
                 'join',
                 'journal',

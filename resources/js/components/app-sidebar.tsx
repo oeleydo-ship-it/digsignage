@@ -1,52 +1,215 @@
 import { Link, usePage } from '@inertiajs/react';
-import { BookOpen, FolderGit2, LayoutGrid } from 'lucide-react';
+import {
+    BarChart3,
+    CalendarClock,
+    CalendarDays,
+    ConciergeBell,
+    Images,
+    Layers,
+    LayoutDashboard,
+    LayoutGrid,
+    LayoutTemplate,
+    ListMusic,
+    MapPin,
+    Megaphone,
+    Monitor,
+    MonitorPlay,
+    PanelTop,
+    PenTool,
+    Radio,
+    Settings,
+    SlidersHorizontal,
+    Tablet,
+    Ticket,
+    Tv,
+} from 'lucide-react';
 import AppLogo from '@/components/app-logo';
-import { NavFooter } from '@/components/nav-footer';
 import { NavMain } from '@/components/nav-main';
-import { NavUser } from '@/components/nav-user';
 import { TeamSwitcher } from '@/components/team-switcher';
 import {
     Sidebar,
     SidebarContent,
-    SidebarFooter,
     SidebarHeader,
     SidebarMenu,
     SidebarMenuButton,
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
-import type { NavItem } from '@/types';
+import { edit as profileEdit } from '@/routes/profile';
+import { index as designsIndex } from '@/routes/designs';
+import { index as locationsIndex } from '@/routes/locations';
+import { index as mediaIndex } from '@/routes/media';
+import { index as screensIndex } from '@/routes/screens';
+import { index as screenGroupsIndex } from '@/routes/screen-groups';
+import { index as channelsIndex } from '@/routes/channels';
+import { index as playlistsIndex } from '@/routes/playlists';
+import { index as schedulesIndex } from '@/routes/schedules';
+import { index as templatesIndex } from '@/routes/templates';
+import type { NavGroup } from '@/types';
 
 export function AppSidebar() {
     const page = usePage();
-    const dashboardUrl = page.props.currentTeam
-        ? dashboard(page.props.currentTeam.slug)
-        : '/';
+    const slug = page.props.currentTeam?.slug;
+    const dashboardUrl = slug ? dashboard(slug) : '/';
+    const queuePermissions = page.props.queuePermissions;
+    const canViewQueue = Boolean(queuePermissions?.canViewQueue);
+    const queueHref = (path: string) =>
+        slug ? `/${slug}/queue${path}` : '/';
 
-    const mainNavItems: NavItem[] = [
+    const groups: NavGroup[] = [
         {
-            title: 'Dashboard',
-            href: dashboardUrl,
-            icon: LayoutGrid,
-        },
-    ];
-
-    const footerNavItems: NavItem[] = [
-        {
-            title: 'Repository',
-            href: 'https://github.com/laravel/react-starter-kit',
-            icon: FolderGit2,
+            title: 'Overview',
+            items: [
+                {
+                    title: 'Dashboard',
+                    href: dashboardUrl,
+                    icon: LayoutGrid,
+                },
+            ],
         },
         {
-            title: 'Documentation',
-            href: 'https://laravel.com/docs/starter-kits#react',
-            icon: BookOpen,
+            title: 'Content',
+            items: [
+                {
+                    title: 'Media',
+                    href: slug ? mediaIndex(slug) : '/',
+                    icon: Images,
+                },
+                {
+                    title: 'Designer',
+                    href: slug ? designsIndex(slug) : '/',
+                    icon: PenTool,
+                },
+                {
+                    title: 'Templates',
+                    href: slug ? templatesIndex(slug) : '/',
+                    icon: LayoutTemplate,
+                },
+                {
+                    title: 'Playlists',
+                    href: slug ? playlistsIndex(slug) : '/',
+                    icon: ListMusic,
+                },
+                {
+                    title: 'Channels',
+                    href: slug ? channelsIndex(slug) : '/',
+                    icon: Tv,
+                },
+            ],
         },
-    ];
+        {
+            title: 'Signage',
+            items: [
+                {
+                    title: 'Screens',
+                    href: slug ? screensIndex(slug) : '/',
+                    icon: Monitor,
+                },
+                {
+                    title: 'Groups',
+                    href: slug ? screenGroupsIndex(slug) : '/',
+                    icon: Layers,
+                },
+                {
+                    title: 'Locations',
+                    href: slug ? locationsIndex(slug) : '/',
+                    icon: MapPin,
+                },
+                {
+                    title: 'Schedule',
+                    href: slug ? schedulesIndex(slug) : '/',
+                    icon: CalendarClock,
+                },
+                    {
+                        title: 'Emergencies',
+                        href: slug ? `/${slug}/emergencies` : '/',
+                        icon: Megaphone,
+                    },
+                ],
+            },
+            ...(canViewQueue
+                ? [
+                      {
+                          title: 'Queue Management',
+                          items: [
+                              {
+                                  title: 'Overview',
+                                  href: queueHref(''),
+                                  icon: LayoutDashboard,
+                              },
+                              {
+                                  title: 'Live Queue',
+                                  href: queueHref('/live'),
+                                  icon: Radio,
+                              },
+                              {
+                                  title: 'Services',
+                                  href: queueHref('/services'),
+                                  icon: ConciergeBell,
+                              },
+                              {
+                                  title: 'Counters',
+                                  href: queueHref('/counters'),
+                                  icon: PanelTop,
+                              },
+                              {
+                                  title: 'Kiosks',
+                                  href: queueHref('/kiosks'),
+                                  icon: Tablet,
+                              },
+                              {
+                                  title: 'Tickets',
+                                  href: queueHref('/tickets'),
+                                  icon: Ticket,
+                              },
+                              {
+                                  title: 'Appointments',
+                                  href: queueHref('/appointments'),
+                                  icon: CalendarDays,
+                              },
+                              {
+                                  title: 'Displays',
+                                  href: queueHref('/displays'),
+                                  icon: MonitorPlay,
+                              },
+                              ...(queuePermissions?.canViewReports
+                                  ? [
+                                        {
+                                            title: 'Reports',
+                                            href: queueHref('/reports'),
+                                            icon: BarChart3,
+                                        },
+                                    ]
+                                  : []),
+                              ...(queuePermissions?.canManageSettings
+                                  ? [
+                                        {
+                                            title: 'Settings',
+                                            href: queueHref('/settings'),
+                                            icon: SlidersHorizontal,
+                                        },
+                                    ]
+                                  : []),
+                          ],
+                      } satisfies NavGroup,
+                  ]
+                : []),
+            {
+                title: '',
+                className: 'pb-8',
+                items: [
+                    {
+                        title: 'Settings',
+                        href: profileEdit(),
+                        icon: Settings,
+                    },
+                ],
+            },
+        ];
 
     return (
-        <Sidebar collapsible="icon" variant="inset">
-            <SidebarHeader>
+        <Sidebar collapsible="icon" variant="sidebar">
+            <SidebarHeader className="border-sidebar-border gap-4 border-b px-3 py-4 group-data-[collapsible=icon]:px-2">
                 <SidebarMenu>
                     <SidebarMenuItem>
                         <SidebarMenuButton size="lg" asChild>
@@ -64,13 +227,8 @@ export function AppSidebar() {
             </SidebarHeader>
 
             <SidebarContent>
-                <NavMain items={mainNavItems} />
+                <NavMain groups={groups} />
             </SidebarContent>
-
-            <SidebarFooter>
-                <NavFooter items={footerNavItems} className="mt-auto" />
-                <NavUser />
-            </SidebarFooter>
         </Sidebar>
     );
 }

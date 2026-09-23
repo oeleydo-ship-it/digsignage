@@ -1,0 +1,61 @@
+<?php
+
+use App\Http\Controllers\Queue\QueueAppointmentController;
+use App\Http\Controllers\Queue\QueueCounterController;
+use App\Http\Controllers\Queue\QueueDisplayController;
+use App\Http\Controllers\Queue\QueueKioskController;
+use App\Http\Controllers\Queue\QueuePageController;
+use App\Http\Controllers\Queue\QueuePriorityController;
+use App\Http\Controllers\Queue\QueueReportController;
+use App\Http\Controllers\Queue\QueueServiceController;
+use App\Http\Controllers\Queue\QueueTicketController;
+use Illuminate\Support\Facades\Route;
+
+Route::prefix('queue')->name('queue.')->middleware('plan.feature:queue_management')->group(function () {
+    Route::get('/', [QueuePageController::class, 'overview'])->name('overview');
+    Route::get('live', [QueuePageController::class, 'live'])->name('live');
+    Route::get('services', [QueueServiceController::class, 'index'])->name('services');
+    Route::post('services', [QueueServiceController::class, 'store'])->name('services.store');
+    Route::patch('services/{queueService}', [QueueServiceController::class, 'update'])->name('services.update');
+    Route::delete('services/{queueService}', [QueueServiceController::class, 'destroy'])->name('services.destroy');
+    Route::get('counters', [QueueCounterController::class, 'index'])->name('counters');
+    Route::post('counters', [QueueCounterController::class, 'store'])->name('counters.store');
+    Route::patch('counters/{queueCounter}', [QueueCounterController::class, 'update'])->name('counters.update');
+    Route::delete('counters/{queueCounter}', [QueueCounterController::class, 'destroy'])->name('counters.destroy');
+    Route::get('counters/{queueCounter}/desk', [QueueCounterController::class, 'desk'])->name('counters.desk');
+    Route::post('counters/{queueCounter}/call-next', [QueueCounterController::class, 'callNext'])->name('counters.call-next');
+    Route::post('counters/{queueCounter}/recall', [QueueCounterController::class, 'recall'])->name('counters.recall');
+    Route::post('counters/{queueCounter}/hold', [QueueCounterController::class, 'hold'])->name('counters.hold');
+    Route::post('counters/{queueCounter}/resume', [QueueCounterController::class, 'resume'])->name('counters.resume');
+    Route::post('counters/{queueCounter}/complete', [QueueCounterController::class, 'complete'])->name('counters.complete');
+    Route::post('counters/{queueCounter}/no-show', [QueueCounterController::class, 'noShow'])->name('counters.no-show');
+    Route::post('counters/{queueCounter}/transfer', [QueueCounterController::class, 'transfer'])->name('counters.transfer');
+    Route::get('kiosks', [QueueKioskController::class, 'index'])->name('kiosks');
+    Route::post('kiosks', [QueueKioskController::class, 'store'])->name('kiosks.store');
+    Route::patch('kiosks/{queueKiosk}', [QueueKioskController::class, 'update'])->name('kiosks.update');
+    Route::delete('kiosks/{queueKiosk}', [QueueKioskController::class, 'destroy'])->name('kiosks.destroy');
+    Route::get('tickets', [QueueTicketController::class, 'index'])->name('tickets');
+    Route::post('tickets', [QueueTicketController::class, 'store'])->name('tickets.store');
+    Route::post('tickets/{queueTicket}/cancel', [QueueTicketController::class, 'cancel'])->name('tickets.cancel');
+    Route::get('appointments', [QueueAppointmentController::class, 'index'])->name('appointments');
+    Route::post('appointments', [QueueAppointmentController::class, 'store'])->name('appointments.store');
+    Route::patch('appointments/rules', [QueueAppointmentController::class, 'updateRules'])->name('appointments.rules.update');
+    Route::patch('appointments/{queueAppointment}', [QueueAppointmentController::class, 'update'])->name('appointments.update');
+    Route::delete('appointments/{queueAppointment}', [QueueAppointmentController::class, 'destroy'])->name('appointments.destroy');
+    Route::post('appointments/{queueAppointment}/check-in', [QueueAppointmentController::class, 'checkIn'])->name('appointments.check-in');
+    Route::get('displays', [QueuePageController::class, 'displays'])->name('displays');
+    Route::post('displays/boards', [QueueDisplayController::class, 'store'])->name('displays.boards.store');
+    Route::post('displays/deploy', [QueueDisplayController::class, 'deploy'])->name('displays.deploy');
+    Route::middleware('plan.feature:analytics')->group(function () {
+        Route::get('reports', [QueueReportController::class, 'index'])->name('reports');
+        Route::get('reports/export', [QueueReportController::class, 'export'])->name('reports.export');
+    });
+    Route::get('settings', [QueuePageController::class, 'settings'])->name('settings');
+    Route::patch('settings', [QueuePageController::class, 'updateSettings'])->name('settings.update');
+    Route::patch('settings/voice', [QueuePageController::class, 'updateVoiceSettings'])->name('settings.voice.update');
+    Route::patch('settings/alerts', [QueuePageController::class, 'updateAlertSettings'])->name('settings.alerts.update');
+    Route::patch('settings/customer-notifications', [QueuePageController::class, 'updateNotificationRules'])->name('settings.customer-notifications.update');
+    Route::post('settings/priorities', [QueuePriorityController::class, 'store'])->name('priorities.store');
+    Route::patch('settings/priorities/{queuePriority}', [QueuePriorityController::class, 'update'])->name('priorities.update');
+    Route::delete('settings/priorities/{queuePriority}', [QueuePriorityController::class, 'destroy'])->name('priorities.destroy');
+});

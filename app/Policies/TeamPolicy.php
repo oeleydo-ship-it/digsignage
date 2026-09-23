@@ -97,4 +97,12 @@ class TeamPolicy
     {
         return ! $team->is_personal && $user->hasTeamPermission($team, TeamPermission::DeleteTeam);
     }
+
+    /**
+     * Determine whether the user can manage organization billing.
+     */
+    public function manageBilling(User $user, Team $team): bool
+    {
+        return $user->hasTeamPermission($team, TeamPermission::ManageBilling);
+    }
 }

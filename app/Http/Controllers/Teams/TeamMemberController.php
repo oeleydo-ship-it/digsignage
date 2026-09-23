@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Teams;
 
+use App\Actions\Audit\RecordOrganizationAudit;
+use App\Enums\AuditAction;
 use App\Enums\TeamRole;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Teams\UpdateTeamMemberRequest;
@@ -21,11 +23,22 @@ class TeamMemberController extends Controller
         Gate::authorize('updateMember', $team);
 
         $newRole = TeamRole::from($request->validated('role'));
-
-        $team->memberships()
+        $membership = $team->memberships()
             ->where('user_id', $user->id)
-            ->firstOrFail()
-            ->update(['role' => $newRole]);
+            ->firstOrFail();
+        $previous = $membership->role;
+
+        $membership->update(['role' => $newRole]);
+
+        app(RecordOrganizationAudit::class)->handle(
+            $team,
+            AuditAction::RoleChanged,
+            $request->user(),
+            'user',
+            $user->id,
+            ['role' => $previous->value],
+            ['role' => $newRole->value, 'member' => $user->email],
+        );
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Member role updated.')]);
 

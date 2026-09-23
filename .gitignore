@@ -42,3 +42,7 @@ yarn-error.log
 /boost.json
 /opencode.json
 /opencode.jsonc
+/public/images/catalog
+/apps/windows-player/node_modules
+/apps/windows-player/out
+/apps/windows-player/dist

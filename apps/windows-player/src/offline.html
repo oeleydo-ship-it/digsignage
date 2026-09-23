@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <title>Player offline</title>
+        <link rel="icon" href="./logo.svg" type="image/svg+xml" />
+        <style>
+            body {
+                margin: 0;
+                min-height: 100vh;
+                display: grid;
+                place-items: center;
+                background: #000;
+                color: #fff;
+                font-family: Segoe UI, system-ui, sans-serif;
+                text-align: center;
+            }
+            .brand {
+                width: 72px;
+                height: 72px;
+                margin: 0 auto 16px;
+                border-radius: 18px;
+                overflow: hidden;
+            }
+            .brand img {
+                display: block;
+                width: 100%;
+                height: 100%;
+            }
+            p {
+                color: #a1a1aa;
+            }
+        </style>
+    </head>
+    <body>
+        <div>
+            <div class="brand">
+                <img src="./logo.svg" alt="DigSignage" />
+            </div>
+            <h1>Cannot reach the server</h1>
+            <p id="hint">Check that DigSignage is running, then press Ctrl+Q and reopen the player.</p>
+        </div>
+        <script>
+            const server = new URLSearchParams(window.location.search).get('server');
+            if (server) {
+                document.getElementById('hint').textContent =
+                    'Could not open ' + server + '/player. Start the Laravel app, then reopen this player.';
+            }
+        </script>
+    </body>
+</html>

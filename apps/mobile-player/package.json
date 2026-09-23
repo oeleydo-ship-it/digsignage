@@ -1,0 +1,37 @@
+{
+  "name": "digsignage-mobile-player",
+  "version": "1.0.0",
+  "main": "index.ts",
+  "dependencies": {
+    "@react-native-async-storage/async-storage": "2.2.0",
+    "expo": "~57.0.24",
+    "expo-application": "~57.0.3",
+    "expo-build-properties": "~57.0.21",
+    "expo-keep-awake": "~57.0.2",
+    "expo-navigation-bar": "~57.0.2",
+    "expo-screen-orientation": "~57.0.2",
+    "expo-splash-screen": "~57.0.9",
+    "expo-status-bar": "~57.0.1",
+    "expo-system-ui": "~57.0.4",
+    "react": "19.2.3",
+    "react-native": "0.86.3",
+    "react-native-view-shot": "5.1.0",
+    "react-native-webview": "13.16.1"
+  },
+  "devDependencies": {
+    "@types/react": "~19.2.2",
+    "typescript": "~6.0.3"
+  },
+  "scripts": {
+    "start": "expo start",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
+    "typecheck": "tsc --noEmit",
+    "doctor": "expo-doctor",
+    "build:all": "eas build --platform all --profile production",
+    "build:preview": "eas build --platform all --profile preview",
+    "submit:all": "eas submit --platform all --profile production"
+  },
+  "private": true,
+  "description": "iOS / iPadOS / Android / Android tablet kiosk player for DigSignage"
+}

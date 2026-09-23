@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Teams;
 
+use App\Actions\Audit\RecordOrganizationAudit;
+use App\Enums\AuditAction;
 use App\Enums\TeamRole;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Teams\CreateTeamInvitationRequest;
@@ -9,6 +11,7 @@ use App\Http\Requests\Teams\RespondToTeamInvitationRequest;
 use App\Models\Team;
 use App\Models\TeamInvitation;
 use App\Notifications\Teams\TeamInvitation as TeamInvitationNotification;
+use App\Support\TeamQuota;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
@@ -24,6 +27,8 @@ class TeamInvitationController extends Controller
     {
         Gate::authorize('inviteMember', $team);
 
+        app(TeamQuota::class)->assertCanAddUser($team);
+
         $invitation = $team->invitations()->create([
             'email' => $request->validated('email'),
             'role' => TeamRole::from($request->validated('role')),
@@ -33,6 +38,16 @@ class TeamInvitationController extends Controller
 
         Notification::route('mail', $invitation->email)
             ->notify(new TeamInvitationNotification($invitation));
+
+        app(RecordOrganizationAudit::class)->handle(
+            $team,
+            AuditAction::UserInvited,
+            $request->user(),
+            'invitation',
+            $invitation->id,
+            null,
+            ['email' => $invitation->email, 'role' => $invitation->role->value],
+        );
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Invitation sent.')]);
 
@@ -64,6 +79,10 @@ class TeamInvitationController extends Controller
 
         DB::transaction(function () use ($user, $invitation) {
             $team = $invitation->team;
+
+            if (! $team->memberships()->where('user_id', $user->id)->exists()) {
+                app(TeamQuota::class)->assertCanAcceptInvitation($team, $user->id);
+            }
 
             $team->memberships()->firstOrCreate(
                 ['user_id' => $user->id],

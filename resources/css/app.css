@@ -9,7 +9,7 @@
 
 @theme {
     --font-sans:
-        'Instrument Sans', ui-sans-serif, system-ui, sans-serif,
+        'Open Sans', 'Segoe UI', ui-sans-serif, system-ui, sans-serif,
         'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol',
         'Noto Color Emoji';
 
@@ -62,39 +62,39 @@
 }
 
 :root {
-    --background: oklch(1 0 0);
-    --foreground: oklch(0.145 0 0);
+    --background: oklch(0.965 0.006 250);
+    --foreground: oklch(0.28 0.03 255);
     --card: oklch(1 0 0);
-    --card-foreground: oklch(0.145 0 0);
+    --card-foreground: oklch(0.28 0.03 255);
     --popover: oklch(1 0 0);
-    --popover-foreground: oklch(0.145 0 0);
-    --primary: oklch(0.205 0 0);
-    --primary-foreground: oklch(0.985 0 0);
-    --secondary: oklch(0.97 0 0);
-    --secondary-foreground: oklch(0.205 0 0);
-    --muted: oklch(0.97 0 0);
-    --muted-foreground: oklch(0.556 0 0);
-    --accent: oklch(0.97 0 0);
-    --accent-foreground: oklch(0.205 0 0);
+    --popover-foreground: oklch(0.28 0.03 255);
+    --primary: oklch(0.51 0.18 260);
+    --primary-foreground: oklch(0.99 0 0);
+    --secondary: oklch(0.94 0.01 250);
+    --secondary-foreground: oklch(0.28 0.03 255);
+    --muted: oklch(0.94 0.01 250);
+    --muted-foreground: oklch(0.52 0.02 255);
+    --accent: oklch(0.94 0.012 250);
+    --accent-foreground: oklch(0.28 0.03 255);
     --destructive: oklch(0.577 0.245 27.325);
     --destructive-foreground: oklch(0.577 0.245 27.325);
-    --border: oklch(0.922 0 0);
-    --input: oklch(0.922 0 0);
-    --ring: oklch(0.87 0 0);
-    --chart-1: oklch(0.646 0.222 41.116);
+    --border: oklch(0.9 0.01 250);
+    --input: oklch(0.9 0.01 250);
+    --ring: oklch(0.51 0.18 260);
+    --chart-1: oklch(0.55 0.18 260);
     --chart-2: oklch(0.6 0.118 184.704);
     --chart-3: oklch(0.398 0.07 227.392);
     --chart-4: oklch(0.828 0.189 84.429);
     --chart-5: oklch(0.769 0.188 70.08);
-    --radius: 0.625rem;
-    --sidebar: oklch(0.985 0 0);
-    --sidebar-foreground: oklch(0.145 0 0);
-    --sidebar-primary: oklch(0.205 0 0);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.97 0 0);
-    --sidebar-accent-foreground: oklch(0.205 0 0);
-    --sidebar-border: oklch(0.922 0 0);
-    --sidebar-ring: oklch(0.87 0 0);
+    --radius: 0.5rem;
+    --sidebar: oklch(0.27 0.028 255);
+    --sidebar-foreground: oklch(0.93 0.01 250);
+    --sidebar-primary: oklch(0.55 0.18 260);
+    --sidebar-primary-foreground: oklch(0.99 0 0);
+    --sidebar-accent: oklch(0.34 0.03 255);
+    --sidebar-accent-foreground: oklch(0.99 0 0);
+    --sidebar-border: oklch(0.34 0.025 255);
+    --sidebar-ring: oklch(0.55 0.18 260);
 }
 
 .dark {
@@ -122,14 +122,14 @@
     --chart-3: oklch(0.769 0.188 70.08);
     --chart-4: oklch(0.627 0.265 303.9);
     --chart-5: oklch(0.645 0.246 16.439);
-    --sidebar: oklch(0.205 0 0);
-    --sidebar-foreground: oklch(0.985 0 0);
-    --sidebar-primary: oklch(0.985 0 0);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.269 0 0);
-    --sidebar-accent-foreground: oklch(0.985 0 0);
-    --sidebar-border: oklch(0.269 0 0);
-    --sidebar-ring: oklch(0.439 0 0);
+    --sidebar: oklch(0.22 0.03 255);
+    --sidebar-foreground: oklch(0.93 0.01 250);
+    --sidebar-primary: oklch(0.62 0.16 255);
+    --sidebar-primary-foreground: oklch(0.99 0 0);
+    --sidebar-accent: oklch(0.3 0.03 255);
+    --sidebar-accent-foreground: oklch(0.99 0 0);
+    --sidebar-border: oklch(0.3 0.025 255);
+    --sidebar-ring: oklch(0.55 0.18 260);
 }
 
 @layer base {
@@ -137,7 +137,53 @@
         @apply border-border;
     }
 
+    html {
+        @apply text-base;
+    }
+
     body {
-        @apply bg-background text-foreground;
+        @apply bg-background text-foreground font-sans antialiased;
+        letter-spacing: -0.011em;
+    }
+
+    [data-slot='sidebar'] {
+        font-size: 0.975rem;
+        letter-spacing: 0.01em;
+    }
+}
+
+@layer components {
+    .dashboard-card {
+        @apply bg-card rounded-xl border shadow-[0_2px_8px_-4px_rgb(15_23_42_/_0.12)];
+    }
+
+    .dashboard-feature {
+        background:
+            radial-gradient(ellipse at 100% 0%, #3159a0 0%, transparent 65%),
+            linear-gradient(145deg, #1c3158, #12213e);
+    }
+
+    .queue-call-blink {
+        animation: queue-call-blink 3.6s step-end 1;
+    }
+}
+
+@keyframes queue-call-blink {
+    0%, 25%, 50%, 75%, 100% {
+        background-color: rgb(255 255 255 / 0.1);
+        color: inherit;
+        box-shadow: none;
+    }
+    12%, 37%, 62%, 87% {
+        background-color: #fbbf24;
+        color: #111827;
+        box-shadow: 0 0 24px rgb(251 191 36 / 0.7);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .queue-call-blink {
+        animation: none;
+        outline: 3px solid #fbbf24;
     }
 }

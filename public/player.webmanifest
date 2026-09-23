@@ -1,0 +1,16 @@
+{
+    "name": "DigSignage Player",
+    "short_name": "Player",
+    "start_url": "/player",
+    "display": "fullscreen",
+    "background_color": "#000000",
+    "theme_color": "#000000",
+    "orientation": "any",
+    "icons": [
+        {
+            "src": "/favicon.ico",
+            "sizes": "48x48",
+            "type": "image/x-icon"
+        }
+    ]
+}

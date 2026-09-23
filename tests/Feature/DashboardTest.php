@@ -6,6 +6,7 @@ use App\Enums\TeamRole;
 use App\Models\Team;
 use App\Models\TeamInvitation;
 use App\Models\User;
+use App\Support\BillingCatalog;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
@@ -33,6 +34,29 @@ class DashboardTest extends TestCase
             ->get(route('dashboard'));
 
         $response->assertOk();
+    }
+
+    public function test_dashboard_includes_the_current_plan_summary()
+    {
+        $user = User::factory()->create();
+        $team = $user->currentTeam;
+
+        $response = $this
+            ->actingAs($user)
+            ->get(route('dashboard'));
+
+        $response->assertOk();
+        $response->assertInertia(fn (Assert $page) => $page
+            ->component('dashboard')
+            ->where('plan.key', $team->plan_key->value)
+            ->where('plan.name', BillingCatalog::plan($team->plan_key)['name'])
+            ->where('plan.price_cents', BillingCatalog::plan($team->plan_key)['price_cents'])
+            ->where('plan.status_label', $team->subscription_status->label())
+            ->has('plan.screens')
+            ->has('plan.users')
+            ->has('plan.screens_limit')
+            ->has('plan.users_limit'),
+        );
     }
 
     public function test_dashboard_includes_pending_invitations_for_the_authenticated_user()

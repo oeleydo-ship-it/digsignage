@@ -60,14 +60,14 @@ export function TeamSwitcher({ inHeader = false }: TeamSwitcherProps) {
                     className={
                         inHeader
                             ? 'h-8 gap-1 px-2'
-                            : 'data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground w-full justify-start px-2 has-[>svg]:px-2'
+                            : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground data-[state=open]:bg-sidebar-accent h-11 w-full justify-start rounded-lg border border-white/10 bg-black/20 px-3 group-data-[collapsible=icon]:size-9 group-data-[collapsible=icon]:px-2 group-data-[collapsible=icon]:has-[>svg]:px-2 has-[>svg]:px-3'
                     }
                 >
                     <Users
                         className={
                             inHeader
                                 ? 'hidden'
-                                : 'hidden size-4 shrink-0 group-data-[collapsible=icon]:block'
+                                : 'size-5 shrink-0 text-blue-300'
                         }
                     />
                     <div

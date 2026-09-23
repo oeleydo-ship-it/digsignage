@@ -21,6 +21,19 @@ class ProfileUpdateTest extends TestCase
         $response->assertOk();
     }
 
+    public function test_profile_settings_include_workspace_flags(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->withoutVite()
+            ->get(route('profile.edit'))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('settings/profile')
+                ->where('canViewAuditLogs', true));
+    }
+
     public function test_profile_information_can_be_updated()
     {
         $user = User::factory()->create();

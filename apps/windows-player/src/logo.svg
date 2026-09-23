@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-label="DigSignage">
+    <rect width="256" height="256" rx="52" fill="#0A2540"/>
+    <rect x="48" y="58" width="160" height="108" rx="16" fill="none" stroke="#F8FAFC" stroke-width="14"/>
+    <polygon points="112,86 112,138 158,112" fill="#2EC4B6"/>
+    <rect x="92" y="182" width="72" height="12" rx="6" fill="#F8FAFC"/>
+    <rect x="116" y="166" width="24" height="20" fill="#F8FAFC"/>
+</svg>
