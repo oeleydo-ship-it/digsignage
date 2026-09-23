@@ -121,6 +121,26 @@ class TeamTest extends TestCase
         ]);
     }
 
+    public function test_owners_can_disable_and_reenable_content_approval_without_losing_other_settings(): void
+    {
+        $user = User::factory()->create();
+        $team = $user->currentTeam;
+        $team->update(['settings' => ['theme' => 'dark']]);
+
+        $this->actingAs($user)
+            ->patch(route('teams.update', $team), ['name' => $team->name, 'approval_enabled' => false])
+            ->assertRedirect();
+
+        $this->assertFalse($team->fresh()->approvalEnabled());
+        $this->assertSame('dark', $team->fresh()->settings['theme']);
+
+        $this->actingAs($user)
+            ->patch(route('teams.update', $team), ['name' => $team->name, 'approval_enabled' => true])
+            ->assertRedirect();
+
+        $this->assertTrue($team->fresh()->approvalEnabled());
+    }
+
     public function test_teams_cannot_be_updated_by_members()
     {
         $owner = User::factory()->create();

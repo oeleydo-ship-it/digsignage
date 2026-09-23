@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { applyQueueCallToManifest, manifestHasQueueWidgets, queueSoundsFromManifest } from './queue-live-manifest';
+import { applyQueueCallToManifest, manifestHasQueueWidgets, preserveQueueServingRows, queueSoundsFromManifest } from './queue-live-manifest';
 import type { PlayerQueueUpdate } from './player-echo';
 import type { PlayerManifest } from './player-runtime';
 
@@ -78,6 +78,43 @@ describe('live queue call on player manifest', () => {
             { id: 11, number: 'REG003', counter_id: 5 },
         ]);
         expect(after.playback.playlist!.items[0].widget!.data.highlight_ticket_id).toBe(12);
+    });
+
+    it('keeps serving counters visible through a transient kiosk snapshot', () => {
+        const before = manifest();
+        before.playback.playlist!.items[0].widget!.data.now_serving = [
+            { id: 10, number: 'REG004', counter: 'Counter 2', counter_id: 4 },
+            { id: 11, number: 'REG003', counter: 'Counter 1', counter_id: 5 },
+        ];
+        const stale = structuredClone(before);
+        stale.version = 6;
+        stale.playback.playlist!.items[0].widget!.data.now_serving = [];
+        stale.playback.playlist!.items[0].widget!.data.waiting = [{ id: 15, number: 'REG006', position: 1 }];
+
+        const stable = preserveQueueServingRows(before, stale);
+        expect(stable.playback.playlist!.items[0].widget!.data.now_serving).toMatchObject([
+            { id: 10, number: 'REG004' },
+            { id: 11, number: 'REG003' },
+        ]);
+        expect(stable.playback.playlist!.items[0].widget!.data.waiting).toMatchObject([{ number: 'REG006' }]);
+        expect(preserveQueueServingRows(before, stale, new Set([4])).playback.playlist!.items[0].widget!.data.now_serving)
+            .toMatchObject([{ id: 11, number: 'REG003' }]);
+    });
+
+    it('keeps another counter when a call is overlaid onto a transient snapshot', () => {
+        const before = manifest();
+        before.playback.playlist!.items[0].widget!.data.now_serving = [
+            { id: 10, number: 'REG004', counter: 'Counter 2', counter_id: 4 },
+            { id: 11, number: 'REG003', counter: 'Counter 1', counter_id: 5 },
+        ];
+        const stale = structuredClone(before);
+        stale.playback.playlist!.items[0].widget!.data.now_serving = [];
+
+        const next = applyQueueCallToManifest(preserveQueueServingRows(before, stale, new Set([4])), update);
+        expect(next.playback.playlist!.items[0].widget!.data.now_serving).toMatchObject([
+            { id: 12, number: 'REG005', counter_id: 4 },
+            { id: 11, number: 'REG003', counter_id: 5 },
+        ]);
     });
 
     it('recognizes queue boards for fast polling when Reverb disconnects', () => {

@@ -14,6 +14,7 @@ export type ContentApprovalPayload = {
     type: string;
     id: number;
     status: string;
+    approval_enabled: boolean;
     locked: boolean;
     can_submit: boolean;
     can_approve: boolean;

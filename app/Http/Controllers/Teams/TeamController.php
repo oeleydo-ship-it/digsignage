@@ -56,6 +56,7 @@ class TeamController extends Controller
                 'name' => $team->name,
                 'slug' => $team->slug,
                 'isPersonal' => $team->is_personal,
+                'approval_enabled' => $team->approvalEnabled(),
             ],
             'members' => $team->members()->get()->map(function (User $member) {
                 /** @var Membership $membership */
@@ -95,7 +96,14 @@ class TeamController extends Controller
         $team = DB::transaction(function () use ($request, $team) {
             $team = Team::whereKey($team->id)->lockForUpdate()->firstOrFail();
 
-            $team->update(['name' => $request->validated('name')]);
+            $values = ['name' => $request->validated('name')];
+            if ($request->has('approval_enabled')) {
+                $values['settings'] = [
+                    ...($team->settings ?? []),
+                    'approval_enabled' => $request->boolean('approval_enabled'),
+                ];
+            }
+            $team->update($values);
 
             return $team;
         });

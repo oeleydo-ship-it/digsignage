@@ -188,6 +188,7 @@ class AppServiceProvider extends ServiceProvider
 
             return $team !== null
                 && $team->id === $content->getAttribute('team_id')
+                && $team->approvalEnabled()
                 && $user->hasTeamPermission($team, TeamPermission::SubmitContent)
                 && $user->can('update', $content)
                 && in_array(ContentWorkflow::statusValue($content), ['draft', 'rejected'], true);
@@ -198,6 +199,7 @@ class AppServiceProvider extends ServiceProvider
 
             return $team !== null
                 && $team->id === $content->getAttribute('team_id')
+                && $team->approvalEnabled()
                 && $user->hasTeamPermission($team, TeamPermission::ApproveContent)
                 && ContentWorkflow::statusValue($content) === 'pending_approval';
         });
@@ -219,7 +221,7 @@ class AppServiceProvider extends ServiceProvider
             return $team !== null
                 && $team->id === $content->getAttribute('team_id')
                 && $user->hasTeamPermission($team, TeamPermission::ArchiveContent)
-                && ContentWorkflow::statusValue($content) !== 'pending_approval';
+                && ! ContentWorkflow::isPending($content);
         });
     }
 

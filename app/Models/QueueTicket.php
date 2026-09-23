@@ -206,11 +206,13 @@ class QueueTicket extends Model
                 'counter_id',
                 'called_at',
             ])) {
-                // Invalidate before broadcasting. Otherwise a player can fetch
-                // the old manifest in response to this event and keep it.
-                PlayerManifestCache::bumpTeam($ticket->team_id);
+                // Never expose a new manifest version until the whole ticket
+                // transaction is committed. The callback is registered before
+                // the broadcast so players fetch the committed state.
                 if (DB::transactionLevel() > 0) {
                     DB::afterCommit(fn () => PlayerManifestCache::bumpTeam($ticket->team_id));
+                } else {
+                    PlayerManifestCache::bumpTeam($ticket->team_id);
                 }
 
                 event($ticket->queueUpdatedEvent($ticket->queue_service_id));
@@ -241,9 +243,10 @@ class QueueTicket extends Model
         });
 
         static::deleted(function (QueueTicket $ticket): void {
-            PlayerManifestCache::bumpTeam($ticket->team_id);
             if (DB::transactionLevel() > 0) {
                 DB::afterCommit(fn () => PlayerManifestCache::bumpTeam($ticket->team_id));
+            } else {
+                PlayerManifestCache::bumpTeam($ticket->team_id);
             }
             event($ticket->queueUpdatedEvent($ticket->queue_service_id));
         });

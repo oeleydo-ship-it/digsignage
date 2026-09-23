@@ -127,13 +127,9 @@ class CallNextQueueTicket
                 ]);
             }
 
-            // The atomic conditional update intentionally bypasses Eloquent
-            // model events, so publish and invalidate its realtime effects
-            // explicitly after a successful claim.
-            PlayerManifestCache::bumpTeam($claimed->team_id);
-            // ClaimRankedQueueTicket uses a conditional UPDATE, so it bypasses
-            // the model's cache invalidation hook. Bump after commit too: a
-            // manifest built during the transition must not survive it.
+            // The conditional claim bypasses model events. Invalidate after
+            // commit, before broadcasting, so players only cache the complete
+            // call-next transition.
             DB::afterCommit(fn () => PlayerManifestCache::bumpTeam($claimed->team_id));
             event(new QueueUpdated(
                 teamId: $claimed->team_id,

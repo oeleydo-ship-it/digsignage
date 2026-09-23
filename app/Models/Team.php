@@ -77,6 +77,11 @@ class Team extends Model
     /** @use HasFactory<TeamFactory> */
     use GeneratesUniqueTeamSlugs, HasFactory, SoftDeletes;
 
+    public function approvalEnabled(): bool
+    {
+        return (bool) ($this->settings['approval_enabled'] ?? true);
+    }
+
     /**
      * Bootstrap the model and its traits.
      */

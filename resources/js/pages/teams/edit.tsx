@@ -36,7 +36,7 @@ import type {
 } from '@/types';
 
 type Props = {
-    team: Team;
+    team: Team & { approval_enabled: boolean };
     members: TeamMember[];
     invitations: TeamInvitation[];
     permissions: TeamPermissions;
@@ -122,6 +122,27 @@ export default function TeamEdit({
                                                 required
                                             />
                                             <InputError message={errors.name} />
+                                        </div>
+
+                                        <div className="flex items-start gap-3 rounded-lg border p-4">
+                                            <input type="hidden" name="approval_enabled" value="0" />
+                                            <input
+                                                id="approval_enabled"
+                                                name="approval_enabled"
+                                                type="checkbox"
+                                                value="1"
+                                                defaultChecked={team.approval_enabled}
+                                                disabled={processing}
+                                                data-test="approval-enabled-toggle"
+                                                className="mt-1 size-4"
+                                            />
+                                            <div>
+                                                <Label htmlFor="approval_enabled">Enable content approval workflow</Label>
+                                                <p className="text-muted-foreground mt-1 text-sm">
+                                                    When disabled, review actions are hidden and authorized publishers can publish directly.
+                                                </p>
+                                                <InputError message={errors.approval_enabled} />
+                                            </div>
                                         </div>
 
                                         <div className="flex items-center gap-4">

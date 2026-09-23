@@ -63,6 +63,9 @@ export default function ContentWorkflowPanel({
                 <p className={compact ? 'text-muted-foreground text-xs' : 'text-sm'}>
                     <span className="font-medium">Workflow:</span>{' '}
                     {statusLabel(approval.status)}
+                    {!approval.approval_enabled && (
+                        <span className="text-muted-foreground ml-2">(review disabled)</span>
+                    )}
                     {approval.locked && (
                         <span className="text-muted-foreground ml-2">
                             Locked while awaiting review

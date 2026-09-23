@@ -972,9 +972,9 @@ function QueueWidgetSurface({
         <div className="min-h-0 flex-1 space-y-2 overflow-hidden">
             {rows.length === 0 ? (
                 <div className="opacity-60" style={{ fontSize: rowSize }}>
-                    <p>{widgetKey === 'queue_waiting_tickets' ? 'No one waiting' : 'No one serving'}</p>
-                    {widgetKey === 'queue_now_serving' && waiting[0]?.number && (
-                        <p style={{ fontSize: smallSize }}>Next waiting: {String(waiting[0].number)}</p>
+                    <p>{widgetKey === 'queue_waiting_tickets' ? 'No one waiting' : waiting.length > 0 ? 'Waiting to be called' : 'No one serving'}</p>
+                    {widgetKey !== 'queue_waiting_tickets' && waiting[0]?.number && (
+                        <p className="font-semibold tabular-nums">{String(waiting[0].number)}</p>
                     )}
                 </div>
             ) : (

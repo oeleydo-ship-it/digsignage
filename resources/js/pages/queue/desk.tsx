@@ -106,7 +106,10 @@ export default function QueueDesk({
             const request = new AbortController();
             statusRequest = request;
             void fetch(`/${slug}/queue/counters/${counter.id}/desk/status`, {
-                headers: { Accept: 'application/json' },
+                headers: {
+                    Accept: 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
                 cache: 'no-store',
                 signal: request.signal,
             }).then(async (response) => {

@@ -1,7 +1,84 @@
 import type { PlayerQueueUpdate } from '@/lib/player-echo';
 import type { PlayerItem, PlayerManifest, PlayerPlaylist } from '@/lib/player-runtime';
 import type { QueueVoiceRequest } from '@/lib/queue-voice';
-import type { WidgetPayload } from '@/types';
+import type { WidgetJsonValue, WidgetPayload } from '@/types';
+
+type QueueRow = Record<string, WidgetJsonValue>;
+
+function queueRows(value: WidgetJsonValue | undefined): QueueRow[] {
+    return Array.isArray(value)
+        ? value.filter((row): row is QueueRow => row !== null && typeof row === 'object' && !Array.isArray(row))
+        : [];
+}
+
+function sameCounter(left: QueueRow, right: QueueRow): boolean {
+    return left.counter_id != null && right.counter_id != null
+        ? Number(left.counter_id) === Number(right.counter_id)
+        : Boolean(left.counter && right.counter && left.counter === right.counter);
+}
+
+function preserveWidgetServing(previous: WidgetPayload | null | undefined, next: WidgetPayload | null | undefined, departed: Set<number>): WidgetPayload | null | undefined {
+    if (!previous || !next || previous.key !== next.key
+        || !['queue_now_serving', 'queue_board', 'queue_counter_number', 'queue_ticker'].includes(next.key)
+        || ['service_id', 'location_id', 'counter_id'].some((key) => String(previous.settings[key] ?? '') !== String(next.settings[key] ?? ''))) {
+        return next;
+    }
+
+    const incoming = queueRows(next.data.now_serving);
+    const missing = queueRows(previous.data.now_serving).filter((row) =>
+        !departed.has(Number(row.counter_id ?? 0))
+        && !incoming.some((current) => current.id === row.id || sameCounter(current, row)),
+    );
+    if (missing.length === 0) return next;
+
+    const serving = [...incoming, ...missing];
+    const stats = next.data.stats && typeof next.data.stats === 'object' && !Array.isArray(next.data.stats)
+        ? { ...next.data.stats, serving: Math.max(Number(next.data.stats.serving ?? 0), serving.length) }
+        : next.data.stats;
+    return {
+        ...next,
+        data: {
+            ...next.data,
+            now_serving: serving,
+            ...(stats === undefined ? {} : { stats }),
+            ticker: serving.map((row) => `${String(row.number ?? '')} → ${String(row.counter ?? 'Desk')}`).join('   •   '),
+        },
+    };
+}
+
+function preserveItemServing(previous: PlayerItem | undefined, next: PlayerItem, departed: Set<number>): PlayerItem {
+    if (!previous || previous.id !== next.id) return next;
+    const widget = preserveWidgetServing(previous.widget, next.widget, departed);
+    const oldElements = Array.isArray(previous.document?.elements) ? previous.document.elements : [];
+    const elements = Array.isArray(next.document?.elements) ? next.document.elements : null;
+    const updatedElements = elements?.map((element, index) => {
+        const old = oldElements[index];
+        if (!old || !element || typeof old !== 'object' || typeof element !== 'object' || Array.isArray(old) || Array.isArray(element)) return element;
+        if (old.id != null && element.id != null && old.id !== element.id) return element;
+        const merged = preserveWidgetServing((old as { widget?: WidgetPayload }).widget, (element as { widget?: WidgetPayload }).widget, departed);
+        return merged === (element as { widget?: WidgetPayload }).widget ? element : { ...element, widget: merged };
+    });
+    if (widget === next.widget && (!elements || updatedElements?.every((value, index) => value === elements[index]))) return next;
+    return { ...next, widget, document: elements ? { ...next.document, elements: updatedElements } : next.document };
+}
+
+function preservePlaylistServing(previous: PlayerPlaylist | null, next: PlayerPlaylist | null, departed: Set<number>): PlayerPlaylist | null {
+    if (!previous || !next || previous.id !== next.id) return next;
+    const items = next.items.map((item) => preserveItemServing(previous.items.find((old) => old.id === item.id), item, departed));
+    return items.every((item, index) => item === next.items[index]) ? next : { ...next, items };
+}
+
+/** Keep other counters visible while a queue event's fresh snapshot catches up. */
+export function preserveQueueServingRows(previous: PlayerManifest, next: PlayerManifest, departed: Set<number> = new Set()): PlayerManifest {
+    const playlist = preservePlaylistServing(previous.playback.playlist, next.playback.playlist, departed);
+    const zones = next.playback.zones.map((zone) => {
+        const old = previous.playback.zones.find((entry) => entry.name === zone.name);
+        const merged = preservePlaylistServing(old?.playlist ?? null, zone.playlist, departed);
+        return merged === zone.playlist ? zone : { ...zone, playlist: merged };
+    });
+    return playlist === next.playback.playlist && zones.every((zone, index) => zone === next.playback.zones[index])
+        ? next : { ...next, playback: { ...next.playback, playlist, zones } };
+}
 
 function matches(settings: WidgetPayload['settings'], update: PlayerQueueUpdate): boolean {
     return (Number(settings.service_id ?? 0) === 0 || Number(settings.service_id) === update.service_id)

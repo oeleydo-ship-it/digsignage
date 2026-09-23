@@ -17,6 +17,7 @@ class SaveTeamRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255', new TeamName],
+            'approval_enabled' => ['sometimes', 'boolean'],
         ];
     }
 }

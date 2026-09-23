@@ -15,6 +15,7 @@ final class ContentApprovalPresenter
     public static function for(User $user, Model $content): array
     {
         $team = $user->currentTeam;
+        $approvalEnabled = $team?->approvalEnabled() ?? true;
         $status = ContentWorkflow::statusValue($content);
         $canUpdate = $user->can('update', $content);
         $canSubmit = $team !== null && $user->hasTeamPermission($team, TeamPermission::SubmitContent);
@@ -28,12 +29,13 @@ final class ContentApprovalPresenter
             'type' => $type,
             'id' => $content->getKey(),
             'status' => $status,
+            'approval_enabled' => $approvalEnabled,
             'locked' => ContentWorkflow::isPending($content),
-            'can_submit' => $canSubmit && $canUpdate && in_array($status, ['draft', 'rejected'], true),
-            'can_approve' => $canApprove && $status === 'pending_approval',
-            'can_reject' => $canApprove && $status === 'pending_approval',
+            'can_submit' => $approvalEnabled && $canSubmit && $canUpdate && in_array($status, ['draft', 'rejected'], true),
+            'can_approve' => $approvalEnabled && $canApprove && $status === 'pending_approval',
+            'can_reject' => $approvalEnabled && $canApprove && $status === 'pending_approval',
             'can_publish' => $canPublish && in_array($status, ContentWorkflow::publishFromStatuses($content), true),
-            'can_archive' => $canArchive && in_array($status, ['draft', 'approved', 'published', 'rejected', 'scheduled'], true),
+            'can_archive' => $canArchive && in_array($status, ['draft', 'approved', 'published', 'rejected', 'scheduled', ...($approvalEnabled ? [] : ['pending_approval'])], true),
             'history' => ContentApprovalEvent::query()
                 ->where('approvable_type', $type)
                 ->where('approvable_id', $content->getKey())

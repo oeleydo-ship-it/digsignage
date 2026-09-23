@@ -13,7 +13,7 @@ import {
     type PlayerCommand,
 } from '@/lib/player-commands';
 import { subscribePlayerCommands, type PlayerQueueUpdate, type ReverbConfig } from '@/lib/player-echo';
-import { applyQueueCallToManifest, manifestHasQueueWidgets, queueSoundsFromManifest } from '@/lib/queue-live-manifest';
+import { applyQueueCallToManifest, manifestHasQueueWidgets, preserveQueueServingRows, queueSoundsFromManifest } from '@/lib/queue-live-manifest';
 import { serializePlayerRefresh } from '@/lib/player-sync';
 import {
     BrowserSpeechVoiceProvider,
@@ -603,6 +603,9 @@ export default function PlayerPlay({
     const tokenRef = useRef<string | null>(null);
     const manifestRef = useRef<PlayerManifest | null>(null);
     const recentQueueCallsRef = useRef(new Map<number, { update: PlayerQueueUpdate; receivedAt: number }>());
+    const displayManifestRef = useRef<PlayerManifest | null>(null);
+    const lastQueueUpdateAtRef = useRef(0);
+    const recentDeparturesRef = useRef(new Map<number, number>());
     const connectionStateRef = useRef<PlayerConnectionState>(
         typeof navigator === 'undefined' || navigator.onLine
             ? 'reconnecting'
@@ -641,14 +644,23 @@ export default function PlayerPlay({
 
     const adoptManifest = useCallback((next: PlayerManifest) => {
         manifestRef.current = next;
-        let display = next;
+        const now = Date.now();
+        const departed = new Set<number>();
+        for (const [counterId, time] of recentDeparturesRef.current) {
+            if (now - time < 5_000) departed.add(counterId);
+            else recentDeparturesRef.current.delete(counterId);
+        }
+        let display = displayManifestRef.current && now - lastQueueUpdateAtRef.current < 5_000
+            ? preserveQueueServingRows(displayManifestRef.current, next, departed)
+            : next;
         for (const [counterId, call] of recentQueueCallsRef.current) {
-            if (Date.now() - call.receivedAt > 5_000) {
+            if (now - call.receivedAt > 5_000) {
                 recentQueueCallsRef.current.delete(counterId);
                 continue;
             }
             display = applyQueueCallToManifest(display, call.update);
         }
+        displayManifestRef.current = display;
         setManifest(display);
 
         if (next.emergency) {
@@ -1294,10 +1306,23 @@ export default function PlayerPlay({
             (update) => {
                 const announcementKey = `${update.ticket_id ?? ''}:${update.called_at ?? ''}`;
                 const currentManifest = manifestRef.current;
+                lastQueueUpdateAtRef.current = Date.now();
+                if (update.counter_id) {
+                    if (update.status === 'called' || update.status === 'serving') {
+                        recentDeparturesRef.current.delete(update.counter_id);
+                    } else if (['completed', 'no_show', 'on_hold', 'transferred', 'cancelled'].includes(update.status ?? '')) {
+                        recentDeparturesRef.current.set(update.counter_id, Date.now());
+                    }
+                }
 
                 if ((update.status === 'called' || update.status === 'serving') && update.counter_id && update.ticket_id) {
                     recentQueueCallsRef.current.set(update.counter_id, { update, receivedAt: Date.now() });
-                    setManifest((previous) => previous ? applyQueueCallToManifest(previous, update) : previous);
+                    const base = displayManifestRef.current ?? currentManifest;
+                    if (base) {
+                        const updated = applyQueueCallToManifest(base, update);
+                        displayManifestRef.current = updated;
+                        setManifest(updated);
+                    }
                 }
 
                 if (

@@ -68,6 +68,7 @@ class ContentApprovalController extends Controller
 
         return Inertia::render('approvals/index', [
             'pending' => $pending,
+            'approvalEnabled' => $team->approvalEnabled(),
         ]);
     }
 
@@ -84,7 +85,7 @@ class ContentApprovalController extends Controller
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Submitted for approval.')]);
 
-        return back(fallback: $this->editorUrlFor($request, $type, $id));
+        return redirect()->to($this->editorUrlFor($request, $type, $id));
     }
 
     public function approve(Request $request, string $current_team, string $type, int $id, TransitionContentApproval $transition): RedirectResponse

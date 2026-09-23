@@ -24,6 +24,75 @@ class ContentApprovalTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_disabling_approval_allows_direct_template_publishing_and_blocks_submission(): void
+    {
+        Queue::fake();
+
+        $owner = User::factory()->create();
+        $team = $owner->currentTeam;
+        $template = Template::factory()->create(['team_id' => $team->id, 'status' => TemplateStatus::Draft]);
+
+        $team->update(['settings' => [...($team->settings ?? []), 'approval_enabled' => false]]);
+
+        $this->actingAs($owner)
+            ->withoutVite()
+            ->get(route('templates.edit', [$team, $template]))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->where('approval.approval_enabled', false)
+                ->where('approval.can_submit', false)
+                ->where('approval.can_publish', true));
+
+        $this->actingAs($owner)
+            ->post(route('approvals.submit', [$team, 'template', $template->id]))
+            ->assertForbidden();
+
+        $this->actingAs($owner)
+            ->post(route('approvals.publish', [$team, 'template', $template->id]))
+            ->assertRedirect();
+
+        $this->assertSame(TemplateStatus::Published, $template->fresh()->status);
+    }
+
+    public function test_disabling_approval_releases_an_already_pending_design(): void
+    {
+        Queue::fake();
+
+        $owner = User::factory()->create();
+        $team = $owner->currentTeam;
+        $design = Design::factory()->create(['team_id' => $team->id, 'status' => DesignStatus::PendingApproval]);
+        $team->update(['settings' => [...($team->settings ?? []), 'approval_enabled' => false]]);
+
+        $this->actingAs($owner)
+            ->withoutVite()
+            ->get(route('designs.edit', [$team, $design]))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->where('approval.locked', false)
+                ->where('approval.can_approve', false)
+                ->where('approval.can_publish', true));
+
+        $this->actingAs($owner)
+            ->post(route('approvals.publish', [$team, 'design', $design->id]))
+            ->assertRedirect();
+
+        $this->assertSame(DesignStatus::Published, $design->fresh()->status);
+    }
+
+    public function test_submission_returns_to_the_editor_even_after_a_background_status_request(): void
+    {
+        Queue::fake();
+
+        $owner = User::factory()->create();
+        $team = $owner->currentTeam;
+        $design = Design::factory()->create(['team_id' => $team->id]);
+
+        $this->actingAs($owner)
+            ->from(route('queue.counters.desk.status', [$team, 1]))
+            ->post(route('approvals.submit', [$team, 'design', $design->id]))
+            ->assertRedirect(route('designs.edit', [$team, $design]));
+    }
+
     public function test_designers_submit_and_content_managers_cannot_approve_their_own_work(): void
     {
         Queue::fake();

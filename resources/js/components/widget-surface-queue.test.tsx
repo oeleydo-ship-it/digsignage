@@ -36,7 +36,7 @@ describe('queue monitor board', () => {
     it('shows a ticket printed at the kiosk in the waiting section', () => {
         const container = board({ now_serving: [], waiting: [{ id: 15, number: 'REG006', position: 1 }] });
 
-        expect(container.textContent).toContain('No one serving');
+        expect(container.textContent).toContain('Waiting to be called');
         expect(container.textContent).toContain('Waiting');
         expect(container.textContent).toContain('REG006');
         expect(container.textContent).not.toContain('No tickets');
@@ -48,6 +48,8 @@ describe('queue monitor board', () => {
             waiting: [{ id: 15, number: 'REG006', position: 1 }],
         });
 
-        expect(container.textContent).toContain('Next waiting: REG006');
+        expect(container.textContent).toContain('Waiting to be called');
+        expect(container.textContent).toContain('REG006');
+        expect(container.textContent).not.toContain('No one serving');
     });
 });

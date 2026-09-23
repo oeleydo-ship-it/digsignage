@@ -6,9 +6,10 @@ import type { PendingApprovalItem } from '@/types';
 
 type Props = {
     pending: PendingApprovalItem[];
+    approvalEnabled: boolean;
 };
 
-export default function ApprovalsIndex({ pending }: Props) {
+export default function ApprovalsIndex({ pending, approvalEnabled }: Props) {
     return (
         <>
             <Head title="Approvals" />
@@ -17,6 +18,12 @@ export default function ApprovalsIndex({ pending }: Props) {
                     title="Approvals"
                     description="Designers submit work. Content managers approve or reject. Publishers release approved items to screens."
                 />
+
+                {!approvalEnabled && (
+                    <p className="rounded-lg border px-4 py-3 text-sm">
+                        Content approval is disabled in Team settings. Authorized publishers can publish directly from an editor.
+                    </p>
+                )}
 
                 <section className="rounded-lg border" data-test="approvals-inbox">
                     <div className="border-b px-4 py-3">

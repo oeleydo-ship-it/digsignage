@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Models\Team;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Validation\ValidationException;
 
@@ -16,7 +17,16 @@ final class ContentWorkflow
 
     public static function isPending(Model $model): bool
     {
-        return self::statusValue($model) === 'pending_approval';
+        return self::approvalEnabled($model) && self::statusValue($model) === 'pending_approval';
+    }
+
+    public static function approvalEnabled(Model $model): bool
+    {
+        $teamId = $model->getAttribute('team_id');
+
+        return is_numeric($teamId)
+            ? (Team::query()->find((int) $teamId)?->approvalEnabled() ?? true)
+            : true;
     }
 
     public static function statusValue(Model $model): string
@@ -75,6 +85,9 @@ final class ContentWorkflow
         self::assertEditable($model);
 
         $current = self::statusValue($model);
+        if (! self::approvalEnabled($model) && $current === 'pending_approval') {
+            $current = 'draft';
+        }
         $next = is_string($requested) && $requested !== '' ? $requested : $current;
 
         if ($contentChanged && in_array($current, ['approved', 'published'], true)) {
@@ -103,6 +116,10 @@ final class ContentWorkflow
      */
     public static function publishFromStatuses(Model $model): array
     {
+        if (! self::approvalEnabled($model)) {
+            return ['draft', 'approved', 'rejected', 'scheduled', 'published', 'pending_approval'];
+        }
+
         if (self::allowsDirectPublish($model)) {
             return ['draft', 'approved', 'rejected', 'scheduled', 'published'];
         }

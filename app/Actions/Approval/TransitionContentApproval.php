@@ -104,7 +104,7 @@ class TransitionContentApproval
             $content,
             ContentApprovalAction::Archived,
             'archived',
-            ['draft', 'approved', 'published', 'rejected', 'scheduled'],
+            ['draft', 'approved', 'published', 'rejected', 'scheduled', ...(! ContentWorkflow::approvalEnabled($content) ? ['pending_approval'] : [])],
             null,
             $comment,
         );
