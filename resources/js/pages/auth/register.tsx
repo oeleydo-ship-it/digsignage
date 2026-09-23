@@ -14,12 +14,14 @@ import type { TeamInvitationContext } from '@/types';
 type Props = {
     passwordRules: string;
     teamInvitation?: TeamInvitationContext | null;
+    initialSetup?: boolean;
+    setupConfigured?: boolean;
 };
 
-export default function Register({ passwordRules, teamInvitation }: Props) {
+export default function Register({ passwordRules, teamInvitation, initialSetup = false, setupConfigured = false }: Props) {
     return (
         <>
-            <Head title="Register" />
+            <Head title={initialSetup ? 'Set up administrator' : 'Register'} />
             <Form
                 {...store.form()}
                 resetOnSuccess={['password', 'password_confirmation']}
@@ -28,6 +30,20 @@ export default function Register({ passwordRules, teamInvitation }: Props) {
             >
                 {({ processing, errors }) => (
                     <>
+                        {initialSetup && (
+                            <div className="rounded-lg border border-border bg-muted/40 p-4 text-sm">
+                                <p className="font-semibold">Set up the platform administrator</p>
+                                <p className="mt-1 text-muted-foreground">
+                                    This is a new installation. Create the first administrator before the site opens to other users.
+                                    Enter the setup key configured on the server.
+                                </p>
+                                {!setupConfigured && (
+                                    <p className="mt-2 text-destructive">
+                                        The server owner must set INITIAL_ADMIN_SETUP_KEY before this form can be submitted.
+                                    </p>
+                                )}
+                            </div>
+                        )}
                         {teamInvitation && (
                             <TeamInvitationAlert
                                 invitation={teamInvitation}
@@ -36,6 +52,20 @@ export default function Register({ passwordRules, teamInvitation }: Props) {
                         )}
 
                         <div className="grid gap-6">
+                            {initialSetup && (
+                                <div className="grid gap-2">
+                                    <Label htmlFor="setup_key">Server setup key</Label>
+                                    <Input
+                                        id="setup_key"
+                                        type="password"
+                                        required
+                                        autoComplete="off"
+                                        name="setup_key"
+                                        placeholder="Enter the one-time setup key"
+                                    />
+                                    <InputError message={errors.setup_key} />
+                                </div>
+                            )}
                             <div className="grid gap-2">
                                 <Label htmlFor="name">Name</Label>
                                 <Input
@@ -107,11 +137,11 @@ export default function Register({ passwordRules, teamInvitation }: Props) {
                                 data-test="register-user-button"
                             >
                                 {processing && <Spinner />}
-                                Create account
+                                {initialSetup ? 'Create administrator' : 'Create account'}
                             </Button>
                         </div>
 
-                        <div className="text-muted-foreground text-center text-sm">
+                        {!initialSetup && <div className="text-muted-foreground text-center text-sm">
                             Already have an account?{' '}
                             <TextLink
                                 href={
@@ -129,7 +159,7 @@ export default function Register({ passwordRules, teamInvitation }: Props) {
                             >
                                 Log in
                             </TextLink>
-                        </div>
+                        </div>}
                     </>
                 )}
             </Form>

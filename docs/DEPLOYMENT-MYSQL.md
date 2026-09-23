@@ -6,7 +6,8 @@ SQLite file in a developer checkout. Do not commit a production `.env`.
 
 ## Server requirements
 
-- PHP 8.3 or newer, including `pdo_mysql`, and the extensions required by Composer.
+- A PHP version compatible with the deployed `composer.lock` (currently PHP
+  8.4.1 or newer), including `pdo_mysql` and the extensions required by Composer.
 - MySQL 8.0 or newer (or a supported MariaDB release), with an existing database
   and a user permitted to create and alter its tables.
 - Composer dependencies installed, built frontend assets, and a web server whose
@@ -18,6 +19,7 @@ In the production `.env`, set at least:
 APP_ENV=production
 APP_DEBUG=false
 APP_URL=https://example.com
+INITIAL_ADMIN_SETUP_KEY=replace-with-a-long-random-one-time-key
 DB_CONNECTION=mysql
 DB_HOST=127.0.0.1
 DB_PORT=3306
@@ -47,6 +49,16 @@ php artisan migrate --force
 php artisan config:cache
 ```
 
+On a fresh production database with no platform administrator, the first visit
+redirects to the administrator registration form. Set a unique, random
+`INITIAL_ADMIN_SETUP_KEY` in the server's private `.env` before visiting it;
+the form requires this key. Do not put the key in a URL or commit it. After the
+administrator account is created, remove the key from `.env` and rerun
+`php artisan config:cache`. Normal registration then resumes. Existing
+installations with a platform administrator skip this first-run flow.
+Generate a suitable key on the server with `openssl rand -hex 32` and keep it
+private.
+
 Back up an existing production database before running migrations. Migrations
 create the schema in MySQL; they do **not** copy existing SQLite records into
 MySQL. If those records matter, plan a separate data migration before switching
@@ -54,9 +66,16 @@ traffic. Do not run `migrate:fresh` against a production database.
 
 ## If nginx still reports 502
 
-A 502 is a failure between nginx and its upstream, usually PHP-FPM; it does not
-by itself identify a MySQL error. On the server, inspect the nginx error log,
+A 502 is a failure between nginx and its upstream, including FastCGI response
+header limits; it does not by itself identify a MySQL error. On the server,
+inspect the nginx error log,
 the configured `fastcgi_pass` socket or port, and the matching PHP-FPM service:
+
+If the log says `upstream sent too big header` for `/login`, deploy the version
+that removes the optional unbounded Vite preload `Link` header. This fixes the
+application-side header growth without weakening security headers. Do not
+confuse `Primary script unknown` requests for non-existent `config.php` files
+from scanners with this login failure.
 
 ```bash
 sudo tail -n 100 /var/log/nginx/error.log
