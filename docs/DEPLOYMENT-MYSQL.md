@@ -1,0 +1,70 @@
+# Deploying with MySQL
+
+DigSignage can use MySQL in production while local development and tests continue
+to use SQLite. The database driver comes from the server's `.env`, not from the
+SQLite file in a developer checkout. Do not commit a production `.env`.
+
+## Server requirements
+
+- PHP 8.3 or newer, including `pdo_mysql`, and the extensions required by Composer.
+- MySQL 8.0 or newer (or a supported MariaDB release), with an existing database
+  and a user permitted to create and alter its tables.
+- Composer dependencies installed, built frontend assets, and a web server whose
+  document root is the application's `public` directory.
+
+In the production `.env`, set at least:
+
+```dotenv
+APP_ENV=production
+APP_DEBUG=false
+APP_URL=https://example.com
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=digsignage
+DB_USERNAME=digsignage
+DB_PASSWORD=replace-with-server-secret
+SESSION_DRIVER=database
+CACHE_STORE=database
+QUEUE_CONNECTION=database
+SESSION_SECURE_COOKIE=true
+```
+
+Replace the example values with the server's real settings. If `DB_URL` is set,
+remove it or make sure it also points to MySQL: it overrides the individual
+`DB_*` connection fields. Keep the existing `APP_KEY` on an established
+installation; generating a new one can invalidate sessions and encrypted data.
+If MySQL requires TLS, set `MYSQL_ATTR_SSL_CA` to the CA file path on the server.
+
+After installing dependencies and setting `.env`, run these commands from the
+application directory:
+
+```bash
+php -m | grep -i pdo_mysql
+php artisan config:clear
+php artisan migrate:status
+php artisan migrate --force
+php artisan config:cache
+```
+
+Back up an existing production database before running migrations. Migrations
+create the schema in MySQL; they do **not** copy existing SQLite records into
+MySQL. If those records matter, plan a separate data migration before switching
+traffic. Do not run `migrate:fresh` against a production database.
+
+## If nginx still reports 502
+
+A 502 is a failure between nginx and its upstream, usually PHP-FPM; it does not
+by itself identify a MySQL error. On the server, inspect the nginx error log,
+the configured `fastcgi_pass` socket or port, and the matching PHP-FPM service:
+
+```bash
+sudo tail -n 100 /var/log/nginx/error.log
+sudo nginx -t
+systemctl list-units 'php*-fpm.service'
+sudo journalctl -u php8.3-fpm -n 100 --no-pager
+```
+
+Substitute the installed PHP-FPM version in the last command. Also check
+`storage/logs/laravel.log` for application or database errors. Do not post
+passwords, `.env`, or full production logs publicly; redact secrets first.
