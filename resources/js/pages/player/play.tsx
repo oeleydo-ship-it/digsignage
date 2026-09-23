@@ -1078,6 +1078,24 @@ export default function PlayerPlay({
     const queueBoardActive = manifestHasQueueWidgets(manifest);
 
     useEffect(() => {
+        if (!queueBoardActive || soundEnabled) return;
+
+        // A paired display may never revisit the pairing screen. Unlock Web
+        // Audio on its next interaction instead of waiting for a special button.
+        const unlock = (event: Event) => {
+            // Player buttons that explicitly unlock sound handle their own click.
+            if (event.target instanceof Element && event.target.closest('button')) return;
+            enableCallSound();
+        };
+        window.addEventListener('pointerdown', unlock, { once: true });
+        window.addEventListener('keydown', unlock, { once: true });
+        return () => {
+            window.removeEventListener('pointerdown', unlock);
+            window.removeEventListener('keydown', unlock);
+        };
+    }, [queueBoardActive, soundEnabled, enableCallSound]);
+
+    useEffect(() => {
         if (pairing.status !== 'ready' || !online || !queueBoardActive) return;
 
         const timer = window.setInterval(() => {
@@ -1568,14 +1586,14 @@ export default function PlayerPlay({
                             </button>
                         )}
                     <div className="absolute right-4 bottom-4 z-50 flex flex-col items-end gap-2 text-xs text-white">
-                        {queueBoardActive && !soundEnabled && (
+                        {queueBoardActive && (
                             <button
                                 type="button"
                                 className="rounded bg-blue-600 px-3 py-2 font-semibold hover:bg-blue-500"
                                 onClick={enableCallSound}
                                 data-test="enable-queue-sound"
                             >
-                                {soundUnavailable ? 'Sound blocked — tap to retry' : 'Enable call sound'}
+                                {soundUnavailable ? 'Sound blocked — tap to retry' : soundEnabled ? 'Test call bell' : 'Tap to enable call sound'}
                             </button>
                         )}
                         {(waiting || usingLastGood) && (

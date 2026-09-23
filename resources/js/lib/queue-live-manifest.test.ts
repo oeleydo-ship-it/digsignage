@@ -150,5 +150,8 @@ describe('live queue call on player manifest', () => {
         }]);
         expect(queueSoundsFromManifest(after, after, now)).toEqual([]);
         expect(queueSoundsFromManifest(before, after, now + 31_000)).toEqual([]);
+
+        after.generated_at = '2026-09-23T12:00:01Z';
+        expect(queueSoundsFromManifest(before, after, now + 3_600_000)).toHaveLength(1);
     });
 });

@@ -210,6 +210,10 @@ function queueWidgets(manifest: PlayerManifest): WidgetPayload[] {
 
 /** Sound-only fallback for a new call discovered through REST manifest polling. */
 export function queueSoundsFromManifest(previous: PlayerManifest, next: PlayerManifest, now = Date.now()): Array<{ key: string; request: QueueVoiceRequest }> {
+    // The manifest and ticket timestamps come from the same server clock.
+    // Use that clock when available so polling still rings on a skewed display.
+    const manifestTime = Date.parse(next.generated_at);
+    const referenceTime = Number.isFinite(manifestTime) ? manifestTime : now;
     const seen = new Set<string>();
     for (const widget of queueWidgets(previous)) {
         for (const value of Array.isArray(widget.data.now_serving) ? widget.data.now_serving : []) {
@@ -224,7 +228,7 @@ export function queueSoundsFromManifest(previous: PlayerManifest, next: PlayerMa
             if (!value || typeof value !== 'object' || Array.isArray(value)) continue;
             const { id, number, counter, called_at: calledAt } = value;
             if (typeof number !== 'string' || typeof counter !== 'string' || typeof calledAt !== 'string') continue;
-            const age = now - Date.parse(calledAt);
+            const age = referenceTime - Date.parse(calledAt);
             if (!Number.isFinite(age) || age < -5_000 || age > 30_000) continue;
             const key = `${id}:${calledAt}`;
             if (seen.has(key)) continue;

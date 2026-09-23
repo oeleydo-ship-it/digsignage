@@ -91,12 +91,11 @@ describe('queue voice announcements', () => {
         expect(manifestWantsQueueSound(manifest({ sound: true, service_id: '8' }), update)).toBe(false);
     });
 
-    it('announces a fresh serving call or recall but ignores stale status changes', () => {
-        const now = Date.parse(update.called_at);
-        expect(shouldAnnounceQueueCall(update, now)).toBe(true);
-        expect(shouldAnnounceQueueCall({ ...update, status: 'serving' }, now)).toBe(true);
-        expect(shouldAnnounceQueueCall({ ...update, status: 'serving' }, now + 31_000)).toBe(false);
-        expect(shouldAnnounceQueueCall({ ...update, status: 'waiting' }, now)).toBe(false);
+    it('announces live calls regardless of clock skew but ignores other status changes', () => {
+        expect(shouldAnnounceQueueCall(update)).toBe(true);
+        expect(shouldAnnounceQueueCall({ ...update, status: 'serving', called_at: '2020-01-01T00:00:00Z' })).toBe(true);
+        expect(shouldAnnounceQueueCall({ ...update, status: 'waiting' })).toBe(false);
+        expect(shouldAnnounceQueueCall({ ...update, called_at: 'invalid' })).toBe(false);
     });
 
     it('plays two bell strikes with decaying overtones without requiring speech synthesis', async () => {

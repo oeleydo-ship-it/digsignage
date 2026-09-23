@@ -176,13 +176,12 @@ export function manifestWantsQueueVoice(manifest: PlayerManifest, update: Player
 
 export function shouldAnnounceQueueCall(
     update: PlayerQueueUpdate,
-    now = Date.now(),
 ): update is PlayerQueueUpdate & { ticket_number: string; counter_name: string; called_at: string } {
     if (update.status !== 'called' && update.status !== 'serving') return false;
     if (!update.ticket_number || !update.counter_name || !update.called_at) return false;
-
-    const age = now - Date.parse(update.called_at);
-    return Number.isFinite(age) && age >= -5_000 && age < 30_000;
+    // Reverb delivers this as a live event. The display and server may have
+    // different clocks, so a timestamp age check can silence a real call.
+    return Number.isFinite(Date.parse(update.called_at));
 }
 
 export class BrowserSpeechVoiceProvider implements QueueVoiceProvider {
@@ -306,8 +305,10 @@ export class BrowserSpeechVoiceProvider implements QueueVoiceProvider {
     }
 
     private context(): AudioContext | null {
-        if (!window.AudioContext) return null;
-        this.audioContext ??= new window.AudioContext();
+        const AudioContextClass = window.AudioContext
+            ?? (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+        if (!AudioContextClass) return null;
+        this.audioContext ??= new AudioContextClass();
         return this.audioContext;
     }
 }
