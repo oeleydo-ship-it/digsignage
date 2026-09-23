@@ -606,7 +606,7 @@ export default function QueueSettings({
                                     })
                                 }
                             />
-                            Play an announcement chime
+                            Play a bell when calling a ticket
                         </label>
                     </div>
                     {permissions.canManageSettings && (

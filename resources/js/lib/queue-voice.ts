@@ -198,7 +198,7 @@ export class BrowserSpeechVoiceProvider implements QueueVoiceProvider {
         try {
             if (context.state === 'suspended') await context.resume();
             if (context.state === 'suspended') return false;
-            await this.chime(0.8);
+            await this.bell(0.8);
             return true;
         } catch {
             return false;
@@ -211,8 +211,8 @@ export class BrowserSpeechVoiceProvider implements QueueVoiceProvider {
         if (settings.chime) {
             try {
                 await Promise.race([
-                    this.chime(settings.volume),
-                    new Promise<void>((resolve) => window.setTimeout(resolve, 250)),
+                    this.bell(settings.volume),
+                    new Promise<void>((resolve) => window.setTimeout(resolve, 1_000)),
                 ]);
             } catch {
                 // Browser autoplay policy may block Web Audio; speech can continue.
@@ -265,16 +265,37 @@ export class BrowserSpeechVoiceProvider implements QueueVoiceProvider {
         });
     }
 
-    private async chime(volume: number): Promise<void> {
+    private async bell(volume: number): Promise<void> {
         const context = this.context();
         if (!context || context.state === 'suspended') return;
-        const oscillator = context.createOscillator();
-        const gain = context.createGain();
-        oscillator.frequency.value = 880;
-        gain.gain.value = Math.min(0.18, volume * 0.18);
-        oscillator.connect(gain); gain.connect(context.destination);
-        oscillator.start(); oscillator.stop(context.currentTime + 0.16);
-        await new Promise<void>((resolve) => { oscillator.onended = () => resolve(); });
+        const loudness = Math.max(0, Math.min(1, volume));
+        const start = context.currentTime + 0.01;
+        let finalOscillator: OscillatorNode | null = null;
+
+        // Two soft strikes with decaying overtones sound like a bell rather
+        // than the old single-frequency ring/beep.
+        for (const [note, delay] of [[784, 0], [587.33, 0.28]]) {
+            for (const [multiple, level] of [[1, 0.14], [2.01, 0.045], [3.93, 0.012]]) {
+                const oscillator = context.createOscillator();
+                const gain = context.createGain();
+                const strike = start + delay;
+                oscillator.type = 'sine';
+                oscillator.frequency.value = note * multiple;
+                gain.gain.setValueAtTime(0.0001, strike);
+                gain.gain.linearRampToValueAtTime(Math.max(0.0001, level * loudness), strike + 0.012);
+                gain.gain.exponentialRampToValueAtTime(0.0001, strike + 0.62);
+                oscillator.connect(gain);
+                gain.connect(context.destination);
+                oscillator.start(strike);
+                oscillator.stop(strike + 0.63);
+                finalOscillator = oscillator;
+            }
+        }
+
+        await new Promise<void>((resolve) => {
+            if (finalOscillator) finalOscillator.onended = () => resolve();
+            else resolve();
+        });
     }
 
     private context(): AudioContext | null {

@@ -99,29 +99,36 @@ describe('queue voice announcements', () => {
         expect(shouldAnnounceQueueCall({ ...update, status: 'waiting' }, now)).toBe(false);
     });
 
-    it('plays a call chime without requiring speech synthesis', async () => {
-        const started = vi.fn();
-        const oscillator = {
-            frequency: { value: 0 },
-            connect: vi.fn(),
-            start: started,
-            stop: vi.fn(() => queueMicrotask(() => oscillator.onended?.())),
-            onended: null as (() => void) | null,
-        };
+    it('plays two bell strikes with decaying overtones without requiring speech synthesis', async () => {
+        const oscillators: Array<{ frequency: { value: number }; start: ReturnType<typeof vi.fn>; onended: (() => void) | null }> = [];
         class FakeAudioContext {
             currentTime = 0;
             destination = {};
-            createOscillator = () => oscillator;
-            createGain = () => ({ gain: { value: 0 }, connect: vi.fn() });
+            createOscillator = () => {
+                const oscillator = {
+                    type: 'sine', frequency: { value: 0 }, connect: vi.fn(), start: vi.fn(),
+                    stop: vi.fn(() => queueMicrotask(() => oscillator.onended?.())),
+                    onended: null as (() => void) | null,
+                };
+                oscillators.push(oscillator);
+                return oscillator;
+            };
+            createGain = () => ({ gain: {
+                setValueAtTime: vi.fn(), linearRampToValueAtTime: vi.fn(), exponentialRampToValueAtTime: vi.fn(),
+            }, connect: vi.fn() });
         }
         vi.stubGlobal('AudioContext', FakeAudioContext);
 
         await new BrowserSpeechVoiceProvider().announce({ ...request('A105'), soundOnly: true });
 
-        expect(started).toHaveBeenCalledOnce();
+        expect(oscillators).toHaveLength(6);
+        expect(oscillators.map((oscillator) => oscillator.frequency.value)).toEqual([
+            784, 784 * 2.01, 784 * 3.93, 587.33, 587.33 * 2.01, 587.33 * 3.93,
+        ]);
+        expect(oscillators.every((oscillator) => oscillator.start.mock.calls.length === 1)).toBe(true);
     });
 
-    it('unlocks and previews the call chime after a user gesture', async () => {
+    it('unlocks and previews the call bell after a user gesture', async () => {
         const started = vi.fn();
         const oscillator = {
             frequency: { value: 0 }, connect: vi.fn(), start: started,
@@ -132,13 +139,15 @@ describe('queue voice announcements', () => {
         const context = {
             state: 'suspended', currentTime: 0, destination: {}, resume,
             createOscillator: () => oscillator,
-            createGain: () => ({ gain: { value: 0 }, connect: vi.fn() }),
+            createGain: () => ({ gain: {
+                setValueAtTime: vi.fn(), linearRampToValueAtTime: vi.fn(), exponentialRampToValueAtTime: vi.fn(),
+            }, connect: vi.fn() }),
         };
         vi.stubGlobal('AudioContext', class { constructor() { return context; } });
 
         expect(await new BrowserSpeechVoiceProvider().enableSound()).toBe(true);
         expect(resume).toHaveBeenCalledOnce();
-        expect(started).toHaveBeenCalledOnce();
+        expect(started).toHaveBeenCalledTimes(6);
     });
 
     it('serializes calls and waits the configured delay without overlap', async () => {
