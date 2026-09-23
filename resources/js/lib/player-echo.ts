@@ -55,16 +55,15 @@ export async function subscribePlayerCommands(
 
         const channel = echo.private(`player.${deviceUuid}`);
         const connection = echo.connector.pusher.connection;
-        const connected = () => onConnectionState?.('connected');
+        const subscribed = () => onConnectionState?.('connected');
         const reconnecting = () => onConnectionState?.('reconnecting');
 
-        connection.bind('connected', connected);
+        connection.bind('connected', reconnecting);
         connection.bind('connecting', reconnecting);
         connection.bind('unavailable', reconnecting);
         connection.bind('disconnected', reconnecting);
-        onConnectionState?.(
-            connection.state === 'connected' ? 'connected' : 'reconnecting',
-        );
+        onConnectionState?.('reconnecting');
+        channel.subscribed(subscribed);
         channel.listen('.command', onCommand);
 
         if (onManifestUpdate) {
@@ -76,7 +75,7 @@ export async function subscribePlayerCommands(
         }
 
         return () => {
-            connection.unbind('connected', connected);
+            connection.unbind('connected', reconnecting);
             connection.unbind('connecting', reconnecting);
             connection.unbind('unavailable', reconnecting);
             connection.unbind('disconnected', reconnecting);

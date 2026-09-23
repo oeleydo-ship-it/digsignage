@@ -12,7 +12,8 @@ import {
     fetchPendingCommands,
     type PlayerCommand,
 } from '@/lib/player-commands';
-import { subscribePlayerCommands, type ReverbConfig } from '@/lib/player-echo';
+import { subscribePlayerCommands, type PlayerQueueUpdate, type ReverbConfig } from '@/lib/player-echo';
+import { applyQueueCallToManifest, manifestHasQueueWidgets, queueSoundsFromManifest } from '@/lib/queue-live-manifest';
 import { serializePlayerRefresh } from '@/lib/player-sync';
 import {
     BrowserSpeechVoiceProvider,
@@ -569,6 +570,9 @@ export default function PlayerPlay({
 }: Props) {
     const [pairing, setPairing] = useState<PairingState>({ status: 'boot' });
     const [manifest, setManifest] = useState<PlayerManifest | null>(null);
+    const [reverbConnected, setReverbConnected] = useState(false);
+    const [soundEnabled, setSoundEnabled] = useState(false);
+    const [soundUnavailable, setSoundUnavailable] = useState(false);
     const [pending, setPending] = useState<PlayerManifest | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [online, setOnline] = useState(
@@ -598,6 +602,7 @@ export default function PlayerPlay({
     } | null>(null);
     const tokenRef = useRef<string | null>(null);
     const manifestRef = useRef<PlayerManifest | null>(null);
+    const recentQueueCallsRef = useRef(new Map<number, { update: PlayerQueueUpdate; receivedAt: number }>());
     const connectionStateRef = useRef<PlayerConnectionState>(
         typeof navigator === 'undefined' || navigator.onLine
             ? 'reconnecting'
@@ -620,6 +625,13 @@ export default function PlayerPlay({
         [],
     );
 
+    const enableCallSound = useCallback(() => {
+        void voiceProviderRef.current.enableSound().then((enabled) => {
+            setSoundEnabled(enabled);
+            setSoundUnavailable(!enabled);
+        });
+    }, []);
+
     useEffect(
         () => () => {
             announcementQueueRef.current.clear();
@@ -629,7 +641,15 @@ export default function PlayerPlay({
 
     const adoptManifest = useCallback((next: PlayerManifest) => {
         manifestRef.current = next;
-        setManifest(next);
+        let display = next;
+        for (const [counterId, call] of recentQueueCallsRef.current) {
+            if (Date.now() - call.receivedAt > 5_000) {
+                recentQueueCallsRef.current.delete(counterId);
+                continue;
+            }
+            display = applyQueueCallToManifest(display, call.update);
+        }
+        setManifest(display);
 
         if (next.emergency) {
             if (!emergencyActiveRef.current) {
@@ -757,6 +777,7 @@ export default function PlayerPlay({
 
     const startPairing = async () => {
         setError(null);
+        enableCallSound();
         void enterPlayerFullscreen().then((ok) => setFullscreen(ok));
         const response = await fetch('/api/player/v1/registrations', {
             method: 'POST',
@@ -924,6 +945,12 @@ export default function PlayerPlay({
             return;
         }
 
+        if (current && navigator.onLine && !emergencyActiveRef.current) {
+            for (const call of queueSoundsFromManifest(current, next)) {
+                announcementQueueRef.current.enqueue(call.key, call.request);
+            }
+        }
+
         const store = playerStore();
         if (next.emergency && current && !current.emergency) {
             rememberPreEmergencyManifest(current, store);
@@ -1035,6 +1062,18 @@ export default function PlayerPlay({
 
         return () => window.clearInterval(timer);
     }, [pairing, pollSeconds, reconnect, updateConnectionState]);
+
+    const queueBoardActive = manifestHasQueueWidgets(manifest);
+
+    useEffect(() => {
+        if (pairing.status !== 'ready' || !online || !queueBoardActive || reverbConnected) return;
+
+        const timer = window.setInterval(() => {
+            void sync().catch(() => undefined);
+        }, 2_000);
+
+        return () => window.clearInterval(timer);
+    }, [pairing.status, online, queueBoardActive, reverbConnected, sync]);
 
     useEffect(() => {
         if (pairing.status !== 'ready' || !online) {
@@ -1255,6 +1294,11 @@ export default function PlayerPlay({
                 const announcementKey = `${update.ticket_id ?? ''}:${update.called_at ?? ''}`;
                 const currentManifest = manifestRef.current;
 
+                if ((update.status === 'called' || update.status === 'serving') && update.counter_id && update.ticket_id) {
+                    recentQueueCallsRef.current.set(update.counter_id, { update, receivedAt: Date.now() });
+                    setManifest((previous) => previous ? applyQueueCallToManifest(previous, update) : previous);
+                }
+
                 if (
                     queueAnnouncementsAllowed(
                         connectionStateRef.current,
@@ -1289,6 +1333,7 @@ export default function PlayerPlay({
             },
             (state) => {
                 if (state === 'reconnecting') {
+                    setReverbConnected(false);
                     realtimeReconnectingRef.current = true;
                     announcementQueueRef.current.clear();
                     updateConnectionState(
@@ -1298,6 +1343,7 @@ export default function PlayerPlay({
                     return;
                 }
 
+                setReverbConnected(true);
                 realtimeReconnectingRef.current = false;
                 announcementQueueRef.current.clear();
                 updateConnectionState('reconnecting');
@@ -1469,6 +1515,7 @@ export default function PlayerPlay({
                 <div
                     className="fixed inset-0 h-full w-full overflow-hidden bg-black"
                     onDoubleClick={() => {
+                        if (!soundEnabled) enableCallSound();
                         void enterPlayerFullscreen().then((ok) =>
                             setFullscreen(ok),
                         );
@@ -1485,6 +1532,7 @@ export default function PlayerPlay({
                                 type="button"
                                 className="absolute inset-0 z-40 flex cursor-pointer flex-col items-center justify-center bg-black/70 text-white"
                                 onClick={() => {
+                                    if (!soundEnabled) enableCallSound();
                                     void enterPlayerFullscreen().then((ok) =>
                                         setFullscreen(ok),
                                     );
@@ -1499,6 +1547,16 @@ export default function PlayerPlay({
                             </button>
                         )}
                     <div className="absolute right-4 bottom-4 z-50 flex flex-col items-end gap-2 text-xs text-white">
+                        {queueBoardActive && !soundEnabled && (
+                            <button
+                                type="button"
+                                className="rounded bg-blue-600 px-3 py-2 font-semibold hover:bg-blue-500"
+                                onClick={enableCallSound}
+                                data-test="enable-queue-sound"
+                            >
+                                {soundUnavailable ? 'Sound blocked — tap to retry' : 'Enable call sound'}
+                            </button>
+                        )}
                         {(waiting || usingLastGood) && (
                             <div className="rounded bg-black/70 px-3 py-2">
                                 {waiting

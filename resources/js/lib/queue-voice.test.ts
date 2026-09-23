@@ -108,20 +108,37 @@ describe('queue voice announcements', () => {
             stop: vi.fn(() => queueMicrotask(() => oscillator.onended?.())),
             onended: null as (() => void) | null,
         };
-        const closed = vi.fn(async () => undefined);
         class FakeAudioContext {
             currentTime = 0;
             destination = {};
             createOscillator = () => oscillator;
             createGain = () => ({ gain: { value: 0 }, connect: vi.fn() });
-            close = closed;
         }
         vi.stubGlobal('AudioContext', FakeAudioContext);
 
         await new BrowserSpeechVoiceProvider().announce({ ...request('A105'), soundOnly: true });
 
         expect(started).toHaveBeenCalledOnce();
-        expect(closed).toHaveBeenCalledOnce();
+    });
+
+    it('unlocks and previews the call chime after a user gesture', async () => {
+        const started = vi.fn();
+        const oscillator = {
+            frequency: { value: 0 }, connect: vi.fn(), start: started,
+            stop: vi.fn(() => queueMicrotask(() => oscillator.onended?.())),
+            onended: null as (() => void) | null,
+        };
+        const resume = vi.fn(async () => { context.state = 'running'; });
+        const context = {
+            state: 'suspended', currentTime: 0, destination: {}, resume,
+            createOscillator: () => oscillator,
+            createGain: () => ({ gain: { value: 0 }, connect: vi.fn() }),
+        };
+        vi.stubGlobal('AudioContext', class { constructor() { return context; } });
+
+        expect(await new BrowserSpeechVoiceProvider().enableSound()).toBe(true);
+        expect(resume).toHaveBeenCalledOnce();
+        expect(started).toHaveBeenCalledOnce();
     });
 
     it('serializes calls and waits the configured delay without overlap', async () => {

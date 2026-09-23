@@ -188,6 +188,22 @@ export function shouldAnnounceQueueCall(
 export class BrowserSpeechVoiceProvider implements QueueVoiceProvider {
     private cancellationVersion = 0;
     private readonly pendingSpeech = new Set<() => void>();
+    private audioContext: AudioContext | null = null;
+
+    /** Must be called from a user gesture on browsers that block autoplay. */
+    async enableSound(): Promise<boolean> {
+        const context = this.context();
+        if (!context) return false;
+
+        try {
+            if (context.state === 'suspended') await context.resume();
+            if (context.state === 'suspended') return false;
+            await this.chime(0.8);
+            return true;
+        } catch {
+            return false;
+        }
+    }
 
     async announce({ ticketNumber, counterName, settings, soundOnly = false }: QueueVoiceRequest): Promise<void> {
         const cancellationVersion = this.cancellationVersion;
@@ -250,15 +266,20 @@ export class BrowserSpeechVoiceProvider implements QueueVoiceProvider {
     }
 
     private async chime(volume: number): Promise<void> {
-        const AudioContextClass = window.AudioContext;
-        if (!AudioContextClass) return;
-        const context = new AudioContextClass();
+        const context = this.context();
+        if (!context || context.state === 'suspended') return;
         const oscillator = context.createOscillator();
         const gain = context.createGain();
         oscillator.frequency.value = 880;
         gain.gain.value = Math.min(0.18, volume * 0.18);
         oscillator.connect(gain); gain.connect(context.destination);
         oscillator.start(); oscillator.stop(context.currentTime + 0.16);
-        await new Promise<void>((resolve) => { oscillator.onended = () => { void context.close(); resolve(); }; });
+        await new Promise<void>((resolve) => { oscillator.onended = () => resolve(); });
+    }
+
+    private context(): AudioContext | null {
+        if (!window.AudioContext) return null;
+        this.audioContext ??= new window.AudioContext();
+        return this.audioContext;
     }
 }

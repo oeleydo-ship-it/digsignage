@@ -13,14 +13,16 @@ const echo = vi.hoisted(() => {
             }),
             unbind: vi.fn((event: string) => listeners.delete(event)),
         },
-        channel: { listen: vi.fn() },
+        channel: { listen: vi.fn(), subscribed: vi.fn((callback: () => void) => { echo.subscription = callback; }) },
+        subscription: undefined as (() => void) | undefined,
         disconnect: vi.fn(),
         leave: vi.fn(),
-        private: vi.fn(() => ({ listen: echo.channel.listen })),
+        private: vi.fn(() => ({ listen: echo.channel.listen, subscribed: echo.channel.subscribed })),
         emit: (event: string) => listeners.get(event)?.(),
         reset: () => {
             listeners.clear();
             echo.connection.state = 'connecting';
+            echo.subscription = undefined;
         },
     };
 });
@@ -62,6 +64,8 @@ describe('player realtime connection', () => {
 
         expect(onState).toHaveBeenLastCalledWith('reconnecting');
         echo.emit('connected');
+        expect(onState).toHaveBeenLastCalledWith('reconnecting');
+        echo.subscription?.();
         expect(onState).toHaveBeenLastCalledWith('connected');
         echo.emit('unavailable');
         expect(onState).toHaveBeenLastCalledWith('reconnecting');
