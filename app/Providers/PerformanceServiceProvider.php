@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Events\PlayerManifestUpdated;
 use App\Models\Announcement;
 use App\Models\Channel;
 use App\Models\ChannelZone;
@@ -180,6 +181,14 @@ class PerformanceServiceProvider extends ServiceProvider
         Screen::saved(function (Screen $screen): void {
             if ($screen->wasChanged(self::MANIFEST_SCREEN_FIELDS) || $this->fallbackImageChanged($screen)) {
                 PlayerManifestCache::bumpTeam($screen->team_id);
+
+                if (DB::transactionLevel() > 0) {
+                    DB::afterCommit(fn () => PlayerManifestCache::bumpTeam($screen->team_id));
+                }
+
+                if ($screen->isPaired()) {
+                    event(new PlayerManifestUpdated($screen->device_uuid));
+                }
             }
         });
         Screen::deleted($bump);

@@ -64,6 +64,35 @@ create the schema in MySQL; they do **not** copy existing SQLite records into
 MySQL. If those records matter, plan a separate data migration before switching
 traffic. Do not run `migrate:fresh` against a production database.
 
+## Live screens and queue calls with Reverb
+
+The app broadcasts queue calls to the relevant queue-display players and
+screen manifest edits to the paired player. Players subscribe on their private
+`player.{device_uuid}` channel and refresh immediately; manifest polling stays
+available if WebSockets disconnect. In production, set these environment
+variables in the hosting panel (use unique generated credentials):
+
+```dotenv
+BROADCAST_CONNECTION=reverb
+REVERB_APP_ID=digsignage
+REVERB_APP_KEY=replace-with-random-public-app-key
+REVERB_APP_SECRET=replace-with-random-private-app-secret
+REVERB_HOST=your-public-websocket-host.example.com
+REVERB_PORT=443
+REVERB_SCHEME=https
+REVERB_SERVER_HOST=127.0.0.1
+REVERB_SERVER_PORT=8080
+```
+
+The host must run `php artisan reverb:start` as a supervised, persistent
+process and proxy the public host's WebSocket `/app` and HTTP `/apps` paths to
+the local Reverb port with upgrade headers. The browser must be able to reach
+that host over WSS and PHP must be able to reach it for publishing. Keep the
+secret server-side; only the app key is sent to players. Refresh Laravel's
+config cache and restart Reverb after changing these values. A deploy that
+does not start Reverb or configure the proxy will continue to work through
+REST polling, but will not deliver instant updates.
+
 ## If nginx still reports 502
 
 A 502 is a failure between nginx and its upstream, including FastCGI response

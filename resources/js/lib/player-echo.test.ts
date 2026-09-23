@@ -71,4 +71,24 @@ describe('player realtime connection', () => {
         expect(echo.leave).toHaveBeenCalledWith('player.device-uuid');
         expect(echo.disconnect).toHaveBeenCalledOnce();
     });
+
+    it('subscribes to screen manifest and queue updates on the device channel', async () => {
+        const onQueue = vi.fn();
+        const onManifest = vi.fn();
+        const unsubscribe = await subscribePlayerCommands(
+            'token',
+            'device-uuid',
+            reverb,
+            vi.fn(),
+            onQueue,
+            undefined,
+            onManifest,
+        );
+
+        expect(echo.private).toHaveBeenCalledWith('player.device-uuid');
+        expect(echo.channel.listen).toHaveBeenCalledWith('.updated', onQueue);
+        expect(echo.channel.listen).toHaveBeenCalledWith('.manifest.updated', onManifest);
+
+        unsubscribe();
+    });
 });

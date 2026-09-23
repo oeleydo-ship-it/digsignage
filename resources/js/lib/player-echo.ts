@@ -33,6 +33,7 @@ export async function subscribePlayerCommands(
     onCommand: (command: PlayerCommand) => void,
     onQueueUpdate?: (update: PlayerQueueUpdate) => void,
     onConnectionState?: (state: PlayerRealtimeState) => void,
+    onManifestUpdate?: () => void,
 ): Promise<() => void> {
     if (!reverb.enabled || !reverb.key || deviceUuid === '') {
         return () => undefined;
@@ -65,6 +66,10 @@ export async function subscribePlayerCommands(
             connection.state === 'connected' ? 'connected' : 'reconnecting',
         );
         channel.listen('.command', onCommand);
+
+        if (onManifestUpdate) {
+            channel.listen('.manifest.updated', onManifestUpdate);
+        }
 
         if (onQueueUpdate) {
             channel.listen('.updated', onQueueUpdate);

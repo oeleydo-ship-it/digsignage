@@ -1307,6 +1307,11 @@ export default function PlayerPlay({
                     );
                 });
             },
+            () => {
+                void sync().catch(() => {
+                    // The regular manifest poll remains the fallback.
+                });
+            },
         ).then((unsubscribe) => {
             leave = unsubscribe;
         });
