@@ -7,17 +7,13 @@ use App\Actions\Design\RestoreDesignRevision;
 use App\Actions\Design\SaveDesign;
 use App\Actions\Widget\HydrateDocumentWidgets;
 use App\Enums\DesignStatus;
-use App\Enums\TemplateStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Design\SaveDesignRequest;
 use App\Models\Design;
 use App\Models\DesignRevision;
 use App\Models\Media;
-use App\Models\Template;
-use App\Support\CatalogTemplateLibrary;
 use App\Support\ContentApprovalPresenter;
 use App\Support\DesignDocument;
-use App\Support\EnsureCatalogTemplates;
 use App\Support\OpaqueProp;
 use App\Widgets\WidgetRegistry;
 use Illuminate\Http\RedirectResponse;
@@ -31,7 +27,7 @@ class DesignController extends Controller
     /**
      * Display a listing of designs.
      */
-    public function index(Request $request, EnsureCatalogTemplates $catalog): Response
+    public function index(Request $request): Response
     {
         Gate::authorize('viewAny', Design::class);
 
@@ -48,31 +44,6 @@ class DesignController extends Controller
             ->withQueryString()
             ->through(fn (Design $design) => $this->listPayload($design));
 
-        $featuredKeys = CatalogTemplateLibrary::featuredKeys();
-        $starterTemplates = [];
-
-        if (Gate::allows('viewAny', Template::class)) {
-            $catalog->handle();
-            $starterTemplates = Template::query()
-                ->visibleTo($request->user(), $team)
-                ->whereNull('team_id')
-                ->where('status', TemplateStatus::Published->value)
-                ->whereIn('slug', $featuredKeys)
-                ->get()
-                ->sortBy(fn (Template $template) => array_search((string) $template->slug, $featuredKeys, true))
-                ->values()
-                ->map(fn (Template $template) => [
-                    'id' => $template->id,
-                    'name' => $template->name,
-                    'description' => $template->description,
-                    'category_label' => $template->category->label(),
-                    'platform' => true,
-                    'has_thumbnail' => filled($template->thumbnail_path),
-                    'width' => $template->width,
-                    'height' => $template->height,
-                ]);
-        }
-
         return Inertia::render('designs/index', [
             'designs' => $designs,
             'filters' => ['search' => $search, 'status' => $status],
@@ -86,7 +57,6 @@ class DesignController extends Controller
                 ['label' => '3840 × 2160', 'width' => 3840, 'height' => 2160],
                 ['label' => '1366 × 768', 'width' => 1366, 'height' => 768],
             ],
-            'starterTemplates' => $starterTemplates,
             'permissions' => $request->user()->toDesignPermissions($team),
         ]);
     }

@@ -24,29 +24,17 @@ import {
     show,
     store,
 } from '@/routes/designs';
-import { index as templatesIndex, instantiate, thumbnail } from '@/routes/templates';
+import { index as templatesIndex } from '@/routes/templates';
 import type { DesignPermissions, DesignRecord, Paginated } from '@/types';
 
 type Preset = { label: string; width: number; height: number };
 type Option = { value: string; label: string };
-
-type StarterTemplate = {
-    id: number;
-    name: string;
-    description: string | null;
-    category_label: string;
-    platform: boolean;
-    has_thumbnail: boolean;
-    width: number;
-    height: number;
-};
 
 type Props = {
     designs: Paginated<DesignRecord>;
     filters: { search: string; status: string };
     statuses: Option[];
     presets: Preset[];
-    starterTemplates?: StarterTemplate[];
     permissions: DesignPermissions;
 };
 
@@ -55,7 +43,6 @@ export default function DesignsIndex({
     filters,
     statuses,
     presets,
-    starterTemplates = [],
     permissions,
 }: Props) {
     const { currentTeam } = usePage().props;
@@ -129,82 +116,6 @@ export default function DesignsIndex({
                             ))}
                     </select>
                 </div>
-
-                {starterTemplates.length > 0 && (
-                    <section className="space-y-3">
-                        <div className="flex flex-wrap items-end justify-between gap-2">
-                            <div>
-                                <h2 className="text-lg font-semibold">
-                                    Start from a template
-                                </h2>
-                                <p className="text-muted-foreground text-sm">
-                                    Ready layouts with live widgets. You can
-                                    change text, URLs, and locations after you
-                                    use one.
-                                </p>
-                            </div>
-                            <Button variant="ghost" size="sm" asChild>
-                                <Link href={templatesIndex.url(slug)}>
-                                    Browse all templates
-                                </Link>
-                            </Button>
-                        </div>
-                        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                            {starterTemplates.map((template) => (
-                                <article
-                                    key={template.id}
-                                    className="bg-card overflow-hidden rounded-xl border"
-                                >
-                                    <div className="bg-muted flex h-28 items-center justify-center">
-                                        {template.has_thumbnail ? (
-                                            <img
-                                                src={thumbnail.url({
-                                                    current_team: slug,
-                                                    template: template.id,
-                                                })}
-                                                alt=""
-                                                className="h-full w-full object-contain"
-                                            />
-                                        ) : (
-                                            <span className="text-muted-foreground text-xs">
-                                                {template.width} ×{' '}
-                                                {template.height}
-                                            </span>
-                                        )}
-                                    </div>
-                                    <div className="space-y-2 p-3">
-                                        <div className="flex items-start justify-between gap-2">
-                                            <h3 className="text-sm font-medium">
-                                                {template.name}
-                                            </h3>
-                                            <Badge>Catalog</Badge>
-                                        </div>
-                                        <p className="text-muted-foreground text-xs">
-                                            {template.category_label}
-                                        </p>
-                                        {permissions.canCreateDesign && (
-                                            <Button
-                                                size="sm"
-                                                onClick={() =>
-                                                    router.post(
-                                                        instantiate.url({
-                                                            current_team: slug,
-                                                            template:
-                                                                template.id,
-                                                        }),
-                                                    )
-                                                }
-                                                data-test="use-template"
-                                            >
-                                                Use
-                                            </Button>
-                                        )}
-                                    </div>
-                                </article>
-                            ))}
-                        </div>
-                    </section>
-                )}
 
                 {designs.data.length === 0 ? (
                     <EmptyState

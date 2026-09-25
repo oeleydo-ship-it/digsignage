@@ -42,6 +42,8 @@ type Option = { value: string; label: string };
 type LocationOption = { id: number; name: string; depth: number };
 type GroupOption = { id: number; name: string };
 
+const PLAYER_URL = 'https://app-cloud.sansascreen.com/player';
+
 type Props = {
     screens: Paginated<ScreenRecord>;
     filters: {
@@ -103,6 +105,17 @@ export default function ScreensIndex({
     const [deleting, setDeleting] = useState<ScreenRecord | null>(null);
     const [form, setForm] = useState(emptyScreen);
     const [search, setSearch] = useState(filters.search);
+    const [playerUrlCopied, setPlayerUrlCopied] = useState(false);
+
+    const copyPlayerUrl = async () => {
+        try {
+            await navigator.clipboard.writeText(PLAYER_URL);
+            setPlayerUrlCopied(true);
+            window.setTimeout(() => setPlayerUrlCopied(false), 2000);
+        } catch {
+            window.prompt('Copy player URL', PLAYER_URL);
+        }
+    };
 
     const allIds = useMemo(
         () => screens.data.map((screen) => screen.id),
@@ -142,17 +155,36 @@ export default function ScreensIndex({
                         title="Screens"
                         description="Register displays, pair players, and assign them to locations."
                     />
-                    {permissions.canPairScreen && (
+                    <div className="flex flex-wrap items-center gap-2">
                         <Button
-                            onClick={() => {
-                                setForm(emptyScreen);
-                                setPairOpen(true);
-                            }}
-                            data-test="pair-screen"
+                            variant="outline"
+                            onClick={() => void copyPlayerUrl()}
+                            data-test="copy-player-url"
                         >
-                            Pair player
+                            {playerUrlCopied ? 'Copied!' : 'Copy player URL'}
                         </Button>
-                    )}
+                        <Button variant="secondary" asChild>
+                            <a
+                                href={PLAYER_URL}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                data-test="open-player-url"
+                            >
+                                Open player
+                            </a>
+                        </Button>
+                        {permissions.canPairScreen && (
+                            <Button
+                                onClick={() => {
+                                    setForm(emptyScreen);
+                                    setPairOpen(true);
+                                }}
+                                data-test="pair-screen"
+                            >
+                                Pair player
+                            </Button>
+                        )}
+                    </div>
                 </div>
 
                 {plain_device_token && (

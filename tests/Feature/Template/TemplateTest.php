@@ -157,7 +157,7 @@ class TemplateTest extends TestCase
         $this->assertSame(1, Template::query()->where('slug', 'lobby-welcome')->count());
     }
 
-    public function test_designer_starter_gallery_installs_catalog_on_first_visit(): void
+    public function test_designer_omits_inline_gallery_and_template_library_installs_catalog_on_visit(): void
     {
         $user = User::factory()->create();
 
@@ -167,7 +167,13 @@ class TemplateTest extends TestCase
             ->assertOk()
             ->assertInertia(fn ($page) => $page
                 ->component('designs/index')
-                ->has('starterTemplates', count(CatalogTemplateLibrary::featuredKeys())));
+                ->missing('starterTemplates'));
+
+        $this->actingAs($user)
+            ->withoutVite()
+            ->get(route('templates.index', $user->currentTeam))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page->component('templates/index'));
 
         $this->assertSame(
             count(CatalogTemplateLibrary::definitions()),
@@ -333,7 +339,7 @@ class TemplateTest extends TestCase
             ->assertOk()
             ->assertInertia(fn ($page) => $page
                 ->component('designs/index')
-                ->has('starterTemplates', count(CatalogTemplateLibrary::featuredKeys())));
+                ->missing('starterTemplates'));
     }
 
     public function test_using_a_catalog_template_copies_widget_props_into_a_team_design(): void
