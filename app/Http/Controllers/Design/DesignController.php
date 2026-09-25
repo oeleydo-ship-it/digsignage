@@ -18,6 +18,7 @@ use App\Support\CatalogTemplateLibrary;
 use App\Support\ContentApprovalPresenter;
 use App\Support\DesignDocument;
 use App\Support\EnsureCatalogTemplates;
+use App\Support\OpaqueProp;
 use App\Widgets\WidgetRegistry;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -140,11 +141,11 @@ class DesignController extends Controller
             'design' => [
                 'id' => $design->id,
                 'name' => $design->name,
-                'document' => app(HydrateDocumentWidgets::class)->handle(
+                'document' => OpaqueProp::from(app(HydrateDocumentWidgets::class)->handle(
                     $request->user()->currentTeam,
                     $design->normalizedDocument(),
                     $request->string('timezone')->toString() ?: 'UTC',
-                ),
+                )),
             ],
         ]);
     }
@@ -252,7 +253,7 @@ class DesignController extends Controller
         return [
             'design' => [
                 ...$this->listPayload($design),
-                'document' => $design->normalizedDocument(),
+                'document' => OpaqueProp::from($design->normalizedDocument()),
             ],
             'revisions' => $design->revisions()
                 ->limit(20)

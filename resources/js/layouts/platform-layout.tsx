@@ -11,7 +11,9 @@ import {
     LayoutTemplate,
     ListTodo,
     Monitor,
+    Rocket,
     ScrollText,
+    Settings,
     Shield,
     Users,
 } from 'lucide-react';
@@ -39,19 +41,57 @@ function PlatformSidebar() {
             title: 'Platform',
             items: [
                 { title: 'Overview', href: '/platform', icon: LayoutGrid },
-                { title: 'Organizations', href: '/platform/organizations', icon: Building2 },
+                {
+                    title: 'General settings',
+                    href: '/platform/settings',
+                    icon: Settings,
+                },
+                {
+                    title: 'Organizations',
+                    href: '/platform/organizations',
+                    icon: Building2,
+                },
                 { title: 'Users', href: '/platform/users', icon: Users },
-                { title: 'Subscriptions', href: '/platform/subscriptions', icon: CreditCard },
+                {
+                    title: 'Subscriptions',
+                    href: '/platform/subscriptions',
+                    icon: CreditCard,
+                },
                 { title: 'Plans', href: '/platform/plans', icon: Shield },
                 { title: 'Screens', href: '/platform/screens', icon: Monitor },
                 { title: 'Usage', href: '/platform/usage', icon: HardDrive },
                 { title: 'Storage', href: '/platform/storage', icon: Database },
-                { title: 'System health', href: '/platform/health', icon: Activity },
+                {
+                    title: 'System health',
+                    href: '/platform/health',
+                    icon: Activity,
+                },
                 { title: 'Jobs', href: '/platform/jobs', icon: ListTodo },
-                { title: 'Templates', href: '/platform/templates', icon: LayoutTemplate },
-                { title: 'Feature flags', href: '/platform/feature-flags', icon: Flag },
-                { title: 'Announcements', href: '/platform/announcements', icon: Bell },
-                { title: 'Audit logs', href: '/platform/audits', icon: ScrollText },
+                {
+                    title: 'Templates',
+                    href: '/platform/templates',
+                    icon: LayoutTemplate,
+                },
+                {
+                    title: 'Feature flags',
+                    href: '/platform/feature-flags',
+                    icon: Flag,
+                },
+                {
+                    title: 'Announcements',
+                    href: '/platform/announcements',
+                    icon: Bell,
+                },
+                {
+                    title: 'Audit logs',
+                    href: '/platform/audits',
+                    icon: ScrollText,
+                },
+                {
+                    title: 'Updates',
+                    href: '/platform/updates',
+                    icon: Rocket,
+                },
             ],
         },
     ];
@@ -72,7 +112,9 @@ function PlatformSidebar() {
                     <SidebarMenu>
                         <SidebarMenuItem>
                             <SidebarMenuButton asChild>
-                                <Link href={`/${slug}/dashboard`}>Back to organization</Link>
+                                <Link href={`/${slug}/dashboard`}>
+                                    Back to organization
+                                </Link>
                             </SidebarMenuButton>
                         </SidebarMenuItem>
                     </SidebarMenu>
@@ -92,7 +134,10 @@ export default function PlatformLayout({
     return (
         <AppShell variant="sidebar">
             <PlatformSidebar />
-            <AppContent variant="sidebar" className="bg-background min-w-0 overflow-x-clip">
+            <AppContent
+                variant="sidebar"
+                className="bg-background min-w-0 overflow-x-clip"
+            >
                 <ImpersonationBanner />
                 <AppSidebarHeader breadcrumbs={breadcrumbs} />
                 {children}

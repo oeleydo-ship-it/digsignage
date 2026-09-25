@@ -21,6 +21,11 @@ enum PlatformAuditAction: string
     case StorageDiskDeleted = 'storage_disk_deleted';
     case StorageDiskTested = 'storage_disk_tested';
     case OrganizationStorageAssigned = 'organization_storage_assigned';
+    case ReleaseUploaded = 'release_uploaded';
+    case ReleaseInstallStarted = 'release_install_started';
+    case ReleaseRollbackStarted = 'release_rollback_started';
+    case ReleaseDeleted = 'release_deleted';
+    case PlatformSettingsUpdated = 'platform_settings_updated';
 
     public function label(): string
     {
@@ -42,6 +47,11 @@ enum PlatformAuditAction: string
             self::StorageDiskDeleted => 'Storage backend deleted',
             self::StorageDiskTested => 'Storage backend tested',
             self::OrganizationStorageAssigned => 'Organization storage assigned',
+            self::ReleaseUploaded => 'Update package uploaded',
+            self::ReleaseInstallStarted => 'Update install started',
+            self::ReleaseRollbackStarted => 'Rollback started',
+            self::ReleaseDeleted => 'Update package deleted',
+            self::PlatformSettingsUpdated => 'General settings updated',
         };
     }
 }

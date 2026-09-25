@@ -23,6 +23,7 @@ export default function CanvasPreview({
     cover = false,
     timezone,
     resolveMedia,
+    staticPreview = false,
 }: {
     document: DesignDocument;
     maxWidth?: number;
@@ -30,6 +31,8 @@ export default function CanvasPreview({
     cover?: boolean;
     timezone?: string;
     resolveMedia?: MediaResolver;
+    /** Swap iframes and video for posters, for dense galleries. */
+    staticPreview?: boolean;
 }) {
     const host = useRef<HTMLDivElement>(null);
     const [available, setAvailable] = useState<{
@@ -121,6 +124,13 @@ export default function CanvasPreview({
                     : undefined
             }
         >
+            {/*
+              Render at the design's native resolution and scale the whole
+              canvas with a transform. Widgets size fonts and padding in
+              absolute pixels, so scaling only element boxes would cram
+              full-size text into miniature frames. A uniform transform makes
+              every preview an exact miniature of what the screen shows.
+            */}
             <div
                 className={
                     fit
@@ -133,49 +143,64 @@ export default function CanvasPreview({
                     background: document.background,
                 }}
             >
-                {ordered.map((element) => {
-                    const fullscreen =
-                        canonicalWidgetKey(element.type) === 'web_page' &&
-                        (element.props.fullscreen === true ||
-                            element.props.fullscreen === 'true' ||
-                            element.props.fullscreen === 1);
+                <div
+                    className="absolute top-0 left-0"
+                    style={{
+                        width: document.width,
+                        height: document.height,
+                        transform: `scale(${scale})`,
+                        transformOrigin: 'top left',
+                    }}
+                >
+                    {ordered.map((element) => {
+                        const fullscreen =
+                            canonicalWidgetKey(element.type) === 'web_page' &&
+                            (element.props.fullscreen === true ||
+                                element.props.fullscreen === 'true' ||
+                                element.props.fullscreen === 1);
 
-                    return (
-                    <div
-                        key={element.id}
-                        className="absolute overflow-hidden text-white"
-                        style={{
-                            left: fullscreen ? 0 : element.x * scale,
-                            top: fullscreen ? 0 : element.y * scale,
-                            width: fullscreen
-                                ? document.width * scale
-                                : element.width * scale,
-                            height: fullscreen
-                                ? document.height * scale
-                                : element.height * scale,
-                            opacity: element.opacity,
-                            transform: `rotate(${fullscreen ? 0 : element.rotation}deg)`,
-                            zIndex: fullscreen
-                                ? element.zIndex + 1000
-                                : element.zIndex,
-                            background:
-                                element.type === 'shape' ||
-                                element.type === 'button'
-                                    ? String(element.props.fill ?? '#2563eb')
-                                    : 'transparent',
-                            borderRadius:
-                                Number(element.props.radius ?? 0) * scale,
-                        }}
-                    >
-                        <DesignElementContent
-                            element={element}
-                            scale={scale}
-                            timezone={timezone}
-                            resolveMedia={resolveMedia}
-                        />
-                    </div>
-                    );
-                })}
+                        return (
+                            <div
+                                key={element.id}
+                                className="absolute overflow-hidden text-white"
+                                style={{
+                                    left: fullscreen ? 0 : element.x,
+                                    top: fullscreen ? 0 : element.y,
+                                    width: fullscreen
+                                        ? document.width
+                                        : element.width,
+                                    height: fullscreen
+                                        ? document.height
+                                        : element.height,
+                                    opacity: element.opacity,
+                                    transform: `rotate(${fullscreen ? 0 : element.rotation}deg)`,
+                                    zIndex: fullscreen
+                                        ? element.zIndex + 1000
+                                        : element.zIndex,
+                                    background:
+                                        element.type === 'shape' ||
+                                        element.type === 'button'
+                                            ? String(
+                                                  element.props.fill ??
+                                                      '#2563eb',
+                                              )
+                                            : 'transparent',
+                                    borderRadius: Number(
+                                        element.props.radius ?? 0,
+                                    ),
+                                }}
+                            >
+                                <DesignElementContent
+                                    element={element}
+                                    scale={1}
+                                    timezone={timezone}
+                                    resolveMedia={resolveMedia}
+                                    staticPreview={staticPreview}
+                                />
+                            </div>
+                        );
+                    })}
+                </div>
             </div>
         </div>
     );

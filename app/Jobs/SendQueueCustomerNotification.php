@@ -48,6 +48,7 @@ class SendQueueCustomerNotification implements ShouldQueue
                 subject: (string) ($payload['subject'] ?? 'Queue update'),
                 body: (string) ($payload['body'] ?? ''),
                 data: is_array($payload['data'] ?? null) ? $payload['data'] : [],
+                teamId: $delivery->team_id,
             ));
             $delivery->forceFill(['status' => 'sent', 'sent_at' => now(), 'error' => null])->save();
         } catch (Throwable $exception) {

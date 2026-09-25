@@ -113,6 +113,24 @@ class Team extends Model
     }
 
     /**
+     * @return HasMany<MeetingRoom, $this>
+     */
+    public function meetingRooms(): HasMany
+    {
+        return $this->hasMany(MeetingRoom::class);
+    }
+
+    /**
+     * External calendar providers such as Microsoft 365.
+     *
+     * @return HasMany<CalendarConnection, $this>
+     */
+    public function calendarConnections(): HasMany
+    {
+        return $this->hasMany(CalendarConnection::class);
+    }
+
+    /**
      * Storage backend this organization's uploads are written to.
      *
      * @return BelongsTo<StorageDisk, $this>

@@ -39,11 +39,16 @@ class ScreenFactory extends Factory
      */
     public function paired(): static
     {
-        return $this->state(fn (array $attributes) => [
-            'device_uuid' => fake()->uuid(),
-            'device_token' => bcrypt('device-token'),
-            'device_token_hash' => hash('sha256', 'device-token'),
-        ]);
+        return $this->state(function (array $attributes) {
+            // device_token_hash is unique, so each paired screen needs its own token.
+            $token = 'device-token-'.fake()->unique()->uuid();
+
+            return [
+                'device_uuid' => fake()->uuid(),
+                'device_token' => bcrypt($token),
+                'device_token_hash' => hash('sha256', $token),
+            ];
+        });
     }
 
     /**

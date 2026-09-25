@@ -1,6 +1,23 @@
+import { usePage } from '@inertiajs/react';
 import type { SVGAttributes } from 'react';
 
+/**
+ * The platform logo: the image uploaded in Super admin → General settings,
+ * or the built-in mark when none is set.
+ */
 export default function AppLogoIcon(props: SVGAttributes<SVGElement>) {
+    const { branding, name } = usePage().props;
+
+    if (branding?.logo_url) {
+        return (
+            <img
+                src={branding.logo_url}
+                alt={name}
+                className={`${props.className ?? ''} object-contain`}
+            />
+        );
+    }
+
     return (
         <svg
             viewBox="0 0 40 42"

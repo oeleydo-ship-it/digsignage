@@ -17,12 +17,14 @@ import type { TeamInvitationContext } from '@/types';
 type Props = {
     status?: string;
     canResetPassword: boolean;
+    canRegister?: boolean;
     teamInvitation?: TeamInvitationContext | null;
 };
 
 export default function Login({
     status,
     canResetPassword,
+    canRegister = true,
     teamInvitation,
 }: Props) {
     return (
@@ -106,20 +108,22 @@ export default function Login({
                             </Button>
                         </div>
 
-                        <div className="text-muted-foreground text-center text-sm">
-                            Don't have an account?{' '}
-                            <TextLink
-                                href={register({
-                                    query: {
-                                        invitation: teamInvitation?.code,
-                                    },
-                                })}
-                                data-test="register-link"
-                                tabIndex={5}
-                            >
-                                Sign up
-                            </TextLink>
-                        </div>
+                        {(canRegister || teamInvitation) && (
+                            <div className="text-muted-foreground text-center text-sm">
+                                Don't have an account?{' '}
+                                <TextLink
+                                    href={register({
+                                        query: {
+                                            invitation: teamInvitation?.code,
+                                        },
+                                    })}
+                                    data-test="register-link"
+                                    tabIndex={5}
+                                >
+                                    Sign up
+                                </TextLink>
+                            </div>
+                        )}
                     </>
                 )}
             </Form>

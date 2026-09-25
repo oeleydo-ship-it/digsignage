@@ -8,6 +8,12 @@ import {
 } from 'react';
 import WebPageEmbed from '@/components/web-page-embed';
 import YoutubeEmbed from '@/components/youtube-embed';
+import {
+    formatMinutes,
+    roomState,
+    upcomingBookings,
+    type ScreenBooking,
+} from '@/lib/room-status';
 import { canonicalWidgetKey } from '@/lib/widget-keys';
 import {
     scaleWidgetFontToBox,
@@ -64,6 +70,44 @@ function useWidgetBoxMinEdge() {
     }, []);
 
     return { ref, minEdge };
+}
+
+/**
+ * Advances through a list on a fixed interval, for widgets that cycle content.
+ */
+function useRotation(count: number, seconds: number): number {
+    const [index, setIndex] = useState(0);
+
+    useEffect(() => {
+        setIndex(0);
+
+        if (count < 2) {
+            return;
+        }
+
+        const timer = window.setInterval(
+            () => setIndex((current) => (current + 1) % count),
+            Math.max(2, seconds) * 1000,
+        );
+
+        return () => window.clearInterval(timer);
+    }, [count, seconds]);
+
+    return count > 0 ? index % count : 0;
+}
+
+/**
+ * Splits `a | b | c` rows into trimmed cells, padded to the expected width.
+ */
+function parseCells(value: unknown, columns: number): string[][] {
+    return parseLines(value).map((line) => {
+        const cells = line.split('|').map((part) => part.trim());
+
+        return Array.from(
+            { length: columns },
+            (_, index) => cells[index] ?? '',
+        );
+    });
 }
 
 function menuFont(base: number, minEdge: number): string | number {
@@ -127,21 +171,48 @@ function bookingSlots(
 export default function WidgetSurface({
     widget,
     timezone = 'UTC',
+    staticPreview = false,
 }: {
     widget: WidgetPayload;
     timezone?: string;
+    /** Replace iframes with posters so dense galleries stay light. */
+    staticPreview?: boolean;
 }) {
     const key = canonicalWidgetKey(widget.key);
     const settings = widget.settings;
     const data = widget.data;
     const [now, setNow] = useState(() => new Date());
     const menuBox = useWidgetBoxMinEdge();
+    const quoteLines = useMemo(
+        () => parseLines(settings.quotes),
+        [settings.quotes],
+    );
+    const galleryLines = useMemo(
+        () => parseLines(settings.images),
+        [settings.images],
+    );
+    const rotationIndex = useRotation(
+        key === 'quote'
+            ? quoteLines.length
+            : key === 'image_gallery'
+              ? galleryLines.length
+              : 0,
+        Math.max(2, Number(settings.rotate_seconds ?? 8)),
+    );
 
     useEffect(() => {
         if (
-            !['clock', 'date', 'countdown', 'world_clock', 'booking'].includes(
-                key,
-            )
+            ![
+                'clock',
+                'date',
+                'countdown',
+                'world_clock',
+                'booking',
+                'analog_clock',
+                'event_schedule',
+                'room_status',
+                'room_board',
+            ].includes(key)
         ) {
             return;
         }
@@ -161,10 +232,32 @@ export default function WidgetSurface({
         }
     }, [now, timezone]);
 
+    if (key === 'room_status' && !data.room) {
+        return (
+            <RoomStatusSurface
+                data={sampleRoomData(now)}
+                settings={settings}
+                now={now}
+                staticPreview
+                notice={
+                    staticPreview
+                        ? undefined
+                        : typeof data.error === 'string'
+                          ? data.error
+                          : 'Choose a room in the widget settings.'
+                }
+            />
+        );
+    }
+
     if (typeof data.error === 'string') {
         return (
             <Fallback
-                title={String(settings.location ?? key)}
+                title={
+                    typeof settings.location === 'string'
+                        ? settings.location
+                        : widgetTitle(key)
+                }
                 body={data.error}
             />
         );
@@ -331,11 +424,38 @@ export default function WidgetSurface({
             );
         }
 
+        if (staticPreview) {
+            return <WebPagePoster url={url} />;
+        }
+
         return <WebPageEmbed url={url} title="Web page" />;
     }
 
     if (key === 'youtube') {
         const id = youtubeId(String(settings.url ?? ''));
+
+        if (id && staticPreview) {
+            return (
+                <div className="relative h-full w-full bg-black">
+                    <img
+                        alt=""
+                        loading="lazy"
+                        className="h-full w-full object-cover"
+                        src={`https://i.ytimg.com/vi/${id}/hqdefault.jpg`}
+                    />
+                    <span className="absolute inset-0 m-auto flex h-[18%] w-[14%] min-w-8 items-center justify-center rounded-[18%] bg-red-600 text-white">
+                        <svg
+                            viewBox="0 0 24 24"
+                            className="h-1/2 w-1/2"
+                            fill="currentColor"
+                            aria-hidden
+                        >
+                            <path d="M8 5v14l11-7z" />
+                        </svg>
+                    </span>
+                </div>
+            );
+        }
 
         return id ? (
             <YoutubeEmbed videoId={id} />
@@ -870,12 +990,801 @@ export default function WidgetSurface({
         );
     }
 
-    return (
-        <Fallback
-            title={key.replaceAll('_', ' ')}
-            body="Widget is configured."
-        />
-    );
+    if (key === 'room_status') {
+        return (
+            <RoomStatusSurface
+                data={data}
+                settings={settings}
+                now={now}
+                staticPreview={staticPreview}
+            />
+        );
+    }
+
+    if (key === 'room_board') {
+        return (
+            <RoomBoardSurface
+                data={Array.isArray(data.rooms) ? data : sampleBoardData(now)}
+                settings={settings}
+                now={now}
+            />
+        );
+    }
+
+    if (key === 'analog_clock') {
+        const face = String(settings.face ?? 'dark');
+        const showSeconds = settings.show_seconds !== false;
+        const accent = widgetColor(settings, '#38bdf8');
+        const dial =
+            face === 'light'
+                ? '#f8fafc'
+                : face === 'minimal'
+                  ? 'transparent'
+                  : '#0f172a';
+        const ink = face === 'light' ? '#0f172a' : '#e2e8f0';
+        const seconds = zoned.getSeconds();
+        const minutes = zoned.getMinutes() + seconds / 60;
+        const hours = (zoned.getHours() % 12) + minutes / 60;
+
+        return (
+            <div className="flex h-full w-full flex-col items-center justify-center gap-2 p-[6%]">
+                <svg
+                    viewBox="0 0 200 200"
+                    className="h-full min-h-0 w-full"
+                    role="img"
+                    aria-label={`Analog clock showing ${zoned.toLocaleTimeString()}`}
+                >
+                    <circle
+                        cx="100"
+                        cy="100"
+                        r="94"
+                        fill={dial}
+                        stroke={ink}
+                        strokeOpacity="0.25"
+                        strokeWidth="2"
+                    />
+                    {Array.from({ length: 12 }, (_, tick) => {
+                        const angle = (tick * 30 * Math.PI) / 180;
+                        const outer = 84;
+                        const inner = tick % 3 === 0 ? 68 : 76;
+
+                        return (
+                            <line
+                                key={tick}
+                                x1={100 + Math.sin(angle) * inner}
+                                y1={100 - Math.cos(angle) * inner}
+                                x2={100 + Math.sin(angle) * outer}
+                                y2={100 - Math.cos(angle) * outer}
+                                stroke={ink}
+                                strokeOpacity={tick % 3 === 0 ? 0.9 : 0.4}
+                                strokeWidth={tick % 3 === 0 ? 4 : 2}
+                                strokeLinecap="round"
+                            />
+                        );
+                    })}
+                    <line
+                        x1="100"
+                        y1="100"
+                        x2={100 + Math.sin((hours * 30 * Math.PI) / 180) * 46}
+                        y2={100 - Math.cos((hours * 30 * Math.PI) / 180) * 46}
+                        stroke={ink}
+                        strokeWidth="7"
+                        strokeLinecap="round"
+                    />
+                    <line
+                        x1="100"
+                        y1="100"
+                        x2={100 + Math.sin((minutes * 6 * Math.PI) / 180) * 68}
+                        y2={100 - Math.cos((minutes * 6 * Math.PI) / 180) * 68}
+                        stroke={ink}
+                        strokeWidth="5"
+                        strokeLinecap="round"
+                    />
+                    {showSeconds && (
+                        <line
+                            x1="100"
+                            y1="100"
+                            x2={
+                                100 +
+                                Math.sin((seconds * 6 * Math.PI) / 180) * 76
+                            }
+                            y2={
+                                100 -
+                                Math.cos((seconds * 6 * Math.PI) / 180) * 76
+                            }
+                            stroke={accent}
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                        />
+                    )}
+                    <circle cx="100" cy="100" r="6" fill={accent} />
+                </svg>
+                {settings.label ? (
+                    <p
+                        className="shrink-0 tracking-[0.2em] uppercase opacity-70"
+                        style={{ color: ink, fontSize: '0.8em' }}
+                    >
+                        {String(settings.label)}
+                    </p>
+                ) : null}
+            </div>
+        );
+    }
+
+    if (key === 'weather_forecast') {
+        const unit = settings.units === 'fahrenheit' ? '°F' : '°C';
+        const days = Array.isArray(data.days) ? data.days : [];
+        const fontSize = widgetFontSize(settings, 32);
+        const color = widgetColor(settings);
+
+        return (
+            <div
+                className="flex h-full flex-col gap-3 p-[5%]"
+                style={{ color }}
+            >
+                <p
+                    className="shrink-0 tracking-[0.2em] uppercase opacity-70"
+                    style={{
+                        fontSize: Math.max(10, Math.round(fontSize * 0.5)),
+                    }}
+                >
+                    {String(data.place ?? settings.location ?? 'Forecast')}
+                </p>
+                {days.length === 0 ? (
+                    <p className="opacity-70">No forecast yet.</p>
+                ) : (
+                    <div
+                        className="grid min-h-0 flex-1 gap-2"
+                        style={{
+                            gridTemplateColumns: `repeat(${days.length}, minmax(0, 1fr))`,
+                        }}
+                    >
+                        {days.map((entry, index) => {
+                            const row =
+                                entry && typeof entry === 'object'
+                                    ? (entry as Record<string, unknown>)
+                                    : {};
+                            const date = new Date(String(row.date ?? ''));
+
+                            return (
+                                <div
+                                    key={index}
+                                    className="flex flex-col items-center justify-center gap-1 rounded-xl bg-white/10 px-2 py-3"
+                                >
+                                    <p
+                                        className="tracking-wide uppercase opacity-70"
+                                        style={{
+                                            fontSize: Math.max(
+                                                10,
+                                                Math.round(fontSize * 0.45),
+                                            ),
+                                        }}
+                                    >
+                                        {Number.isNaN(date.getTime())
+                                            ? '—'
+                                            : date.toLocaleDateString([], {
+                                                  weekday: 'short',
+                                              })}
+                                    </p>
+                                    <p style={{ fontSize: fontSize * 1.1 }}>
+                                        {weatherGlyph(Number(row.code))}
+                                    </p>
+                                    <p
+                                        className="font-semibold tabular-nums"
+                                        style={{ fontSize }}
+                                    >
+                                        {row.high === null ||
+                                        row.high === undefined
+                                            ? '—'
+                                            : `${Math.round(Number(row.high))}${unit}`}
+                                    </p>
+                                    <p
+                                        className="tabular-nums opacity-60"
+                                        style={{
+                                            fontSize: Math.max(
+                                                10,
+                                                Math.round(fontSize * 0.6),
+                                            ),
+                                        }}
+                                    >
+                                        {row.low === null ||
+                                        row.low === undefined
+                                            ? '—'
+                                            : `${Math.round(Number(row.low))}${unit}`}
+                                    </p>
+                                </div>
+                            );
+                        })}
+                    </div>
+                )}
+            </div>
+        );
+    }
+
+    if (key === 'metric_tiles') {
+        const metrics = parseCells(settings.metrics, 3);
+        const columns = Math.max(1, Math.min(4, Number(settings.columns ?? 2)));
+        const fontSize = widgetFontSize(settings, 48);
+        const color = widgetColor(settings);
+
+        return (
+            <div
+                className="flex h-full flex-col gap-3 p-[5%]"
+                style={{ color }}
+            >
+                {settings.heading ? (
+                    <p
+                        className="shrink-0 tracking-[0.2em] uppercase opacity-70"
+                        style={{
+                            fontSize: Math.max(10, Math.round(fontSize * 0.35)),
+                        }}
+                    >
+                        {String(settings.heading)}
+                    </p>
+                ) : null}
+                <div
+                    className="grid min-h-0 flex-1 gap-3"
+                    style={{
+                        gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
+                    }}
+                >
+                    {metrics.map(([label, value, change], index) => (
+                        <div
+                            key={`${label}-${index}`}
+                            className="flex flex-col justify-center gap-1 rounded-2xl bg-white/10 px-[6%] py-[4%]"
+                        >
+                            <p
+                                className="truncate tracking-wide uppercase opacity-65"
+                                style={{
+                                    fontSize: Math.max(
+                                        10,
+                                        Math.round(fontSize * 0.3),
+                                    ),
+                                }}
+                            >
+                                {label}
+                            </p>
+                            <p
+                                className="font-semibold tabular-nums"
+                                style={{ fontSize, lineHeight: 1.05 }}
+                            >
+                                {value}
+                            </p>
+                            {change ? (
+                                <p
+                                    className={
+                                        change.trim().startsWith('-')
+                                            ? 'text-rose-300'
+                                            : 'text-emerald-300'
+                                    }
+                                    style={{
+                                        fontSize: Math.max(
+                                            10,
+                                            Math.round(fontSize * 0.34),
+                                        ),
+                                    }}
+                                >
+                                    {change}
+                                </p>
+                            ) : null}
+                        </div>
+                    ))}
+                </div>
+            </div>
+        );
+    }
+
+    if (key === 'progress_goal') {
+        const suffix = String(settings.suffix ?? '');
+        const goals = parseCells(settings.goals, 3);
+        const fontSize = widgetFontSize(settings, 28);
+        const color = widgetColor(settings);
+
+        return (
+            <div
+                className="flex h-full flex-col gap-4 p-[5%]"
+                style={{ color }}
+            >
+                {settings.heading ? (
+                    <p
+                        className="shrink-0 tracking-[0.2em] uppercase opacity-70"
+                        style={{
+                            fontSize: Math.max(10, Math.round(fontSize * 0.6)),
+                        }}
+                    >
+                        {String(settings.heading)}
+                    </p>
+                ) : null}
+                <div className="flex min-h-0 flex-1 flex-col justify-evenly gap-3">
+                    {goals.map(([label, value, target], index) => {
+                        const current = Number(value.replace(/[^0-9.-]/g, ''));
+                        const goal = Number(target.replace(/[^0-9.-]/g, ''));
+                        const percent =
+                            Number.isFinite(current) &&
+                            Number.isFinite(goal) &&
+                            goal > 0
+                                ? Math.max(
+                                      0,
+                                      Math.min(100, (current / goal) * 100),
+                                  )
+                                : 0;
+
+                        return (
+                            <div
+                                key={`${label}-${index}`}
+                                className="space-y-1"
+                            >
+                                <div
+                                    className="flex items-end justify-between gap-3"
+                                    style={{ fontSize }}
+                                >
+                                    <span className="truncate">{label}</span>
+                                    <span className="shrink-0 tabular-nums">
+                                        {value}
+                                        {suffix} / {target}
+                                        {suffix}
+                                    </span>
+                                </div>
+                                <div className="h-[0.6em] overflow-hidden rounded-full bg-white/15">
+                                    <div
+                                        className="h-full rounded-full bg-sky-400"
+                                        style={{ width: `${percent}%` }}
+                                    />
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            </div>
+        );
+    }
+
+    if (key === 'gauge') {
+        const min = Number(settings.min ?? 0);
+        const max = Number(settings.max ?? 100);
+        const value = Number(settings.value ?? 0);
+        const span = max - min;
+        const ratio =
+            Number.isFinite(span) && span !== 0
+                ? Math.max(0, Math.min(1, (value - min) / span))
+                : 0;
+        const accent = widgetColor(settings, '#22d3ee');
+        const fontSize = widgetFontSize(settings, 64);
+        // 240-degree sweep starting bottom-left, drawn as a dashed arc.
+        const radius = 78;
+        const sweep = (240 / 360) * 2 * Math.PI * radius;
+        const circumference = 2 * Math.PI * radius;
+
+        return (
+            <div className="relative flex h-full w-full items-center justify-center p-[6%]">
+                <svg
+                    viewBox="0 0 200 200"
+                    className="h-full max-h-full w-full"
+                    role="img"
+                    aria-label={`${String(settings.label ?? 'Gauge')} ${value}`}
+                >
+                    <g transform="rotate(150 100 100)">
+                        <circle
+                            cx="100"
+                            cy="100"
+                            r={radius}
+                            fill="none"
+                            stroke="#ffffff"
+                            strokeOpacity="0.15"
+                            strokeWidth="18"
+                            strokeLinecap="round"
+                            strokeDasharray={`${sweep} ${circumference}`}
+                        />
+                        <circle
+                            cx="100"
+                            cy="100"
+                            r={radius}
+                            fill="none"
+                            stroke={accent}
+                            strokeWidth="18"
+                            strokeLinecap="round"
+                            strokeDasharray={`${sweep * ratio} ${circumference}`}
+                        />
+                    </g>
+                </svg>
+                <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-1 text-center">
+                    <p
+                        className="font-semibold tabular-nums"
+                        style={{ color: accent, fontSize, lineHeight: 1 }}
+                    >
+                        {Number.isFinite(value) ? value : '—'}
+                        {String(settings.suffix ?? '')}
+                    </p>
+                    <p
+                        className="tracking-[0.2em] text-white/70 uppercase"
+                        style={{
+                            fontSize: Math.max(10, Math.round(fontSize * 0.24)),
+                        }}
+                    >
+                        {String(settings.label ?? '')}
+                    </p>
+                </div>
+            </div>
+        );
+    }
+
+    if (key === 'quote') {
+        const [text, attribution] = (quoteLines[rotationIndex] ?? '')
+            .split('|')
+            .map((part) => part.trim());
+        const fontSize = widgetFontSize(settings, 44);
+        const color = widgetColor(settings);
+
+        return (
+            <div
+                className="flex h-full flex-col items-center justify-center gap-4 p-[7%] text-center"
+                style={{ color }}
+            >
+                <p
+                    className="font-light italic"
+                    style={{ fontSize, lineHeight: 1.25 }}
+                >
+                    {text ? `“${text}”` : 'Add a quote'}
+                </p>
+                {attribution ? (
+                    <p
+                        className="tracking-[0.2em] uppercase opacity-70"
+                        style={{
+                            fontSize: Math.max(10, Math.round(fontSize * 0.4)),
+                        }}
+                    >
+                        {attribution}
+                    </p>
+                ) : null}
+            </div>
+        );
+    }
+
+    if (key === 'safety_counter') {
+        const days = Number(data.days ?? 0);
+        const record = Number(settings.record ?? 0);
+        const fontSize = widgetFontSize(settings, 140);
+        const color = widgetColor(settings);
+
+        return (
+            <div
+                className="flex h-full flex-col items-center justify-center gap-2 p-[5%] text-center"
+                style={{ color }}
+            >
+                <p
+                    className="font-bold tabular-nums"
+                    style={{ fontSize, lineHeight: 1 }}
+                >
+                    {Number.isFinite(days) ? days : 0}
+                </p>
+                <p
+                    className="tracking-[0.2em] uppercase opacity-80"
+                    style={{
+                        fontSize: Math.max(12, Math.round(fontSize * 0.16)),
+                    }}
+                >
+                    {String(settings.label ?? 'Days without an incident')}
+                </p>
+                {record > 0 ? (
+                    <p
+                        className="opacity-60"
+                        style={{
+                            fontSize: Math.max(10, Math.round(fontSize * 0.12)),
+                        }}
+                    >
+                        Best record {record}
+                    </p>
+                ) : null}
+            </div>
+        );
+    }
+
+    if (key === 'image_gallery') {
+        const source = galleryLines[rotationIndex] ?? '';
+        const fit = settings.objectFit === 'contain' ? 'contain' : 'cover';
+
+        if (!source) {
+            return <Fallback title="Image gallery" body="Add image URLs" />;
+        }
+
+        return (
+            <div className="relative h-full w-full overflow-hidden bg-black">
+                <img
+                    key={source}
+                    src={source}
+                    alt=""
+                    className="h-full w-full"
+                    style={{ objectFit: fit }}
+                />
+                {settings.caption === true ? (
+                    <p className="absolute inset-x-0 bottom-0 truncate bg-black/50 px-3 py-2 text-sm text-white">
+                        {source.split('/').pop()}
+                    </p>
+                ) : null}
+            </div>
+        );
+    }
+
+    if (key === 'directory') {
+        const entries = parseCells(settings.entries, 3);
+        const fontSize = widgetFontSize(settings, 30);
+        const color = widgetColor(settings);
+
+        return (
+            <div
+                className="flex h-full flex-col gap-2 p-[5%]"
+                style={{ color }}
+            >
+                {settings.heading ? (
+                    <p
+                        className="shrink-0 tracking-[0.2em] uppercase opacity-70"
+                        style={{
+                            fontSize: Math.max(10, Math.round(fontSize * 0.55)),
+                        }}
+                    >
+                        {String(settings.heading)}
+                    </p>
+                ) : null}
+                <div className="flex min-h-0 flex-1 flex-col justify-evenly">
+                    {entries.map(([name, location, direction], index) => (
+                        <div
+                            key={`${name}-${index}`}
+                            className="flex items-center justify-between gap-4 border-b border-white/10 py-[1.5%]"
+                            style={{ fontSize }}
+                        >
+                            <span className="min-w-0 flex-1 truncate font-medium">
+                                {name}
+                            </span>
+                            <span className="shrink-0 opacity-70">
+                                {location}
+                            </span>
+                            <span
+                                className="shrink-0"
+                                aria-label={direction}
+                                style={{ fontSize: fontSize * 1.2 }}
+                            >
+                                {directionArrow(direction)}
+                            </span>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        );
+    }
+
+    if (key === 'celebrations') {
+        const people = parseCells(settings.people, 3);
+        const fontSize = widgetFontSize(settings, 30);
+        const color = widgetColor(settings);
+
+        return (
+            <div
+                className="flex h-full flex-col gap-3 p-[5%]"
+                style={{ color }}
+            >
+                {settings.heading ? (
+                    <p
+                        className="shrink-0 tracking-[0.2em] uppercase opacity-70"
+                        style={{
+                            fontSize: Math.max(10, Math.round(fontSize * 0.55)),
+                        }}
+                    >
+                        {String(settings.heading)}
+                    </p>
+                ) : null}
+                <div className="flex min-h-0 flex-1 flex-col justify-evenly gap-2">
+                    {people.map(([name, occasion, when], index) => (
+                        <div
+                            key={`${name}-${index}`}
+                            className="flex items-center gap-3 rounded-2xl bg-white/10 px-[4%] py-[2.5%]"
+                        >
+                            <span
+                                className="shrink-0"
+                                aria-hidden
+                                style={{ fontSize: fontSize * 1.1 }}
+                            >
+                                {occasionGlyph(occasion)}
+                            </span>
+                            <div className="min-w-0 flex-1">
+                                <p
+                                    className="truncate font-medium"
+                                    style={{ fontSize }}
+                                >
+                                    {name}
+                                </p>
+                                <p
+                                    className="truncate opacity-65"
+                                    style={{
+                                        fontSize: Math.max(
+                                            10,
+                                            Math.round(fontSize * 0.55),
+                                        ),
+                                    }}
+                                >
+                                    {occasion}
+                                </p>
+                            </div>
+                            <span
+                                className="shrink-0 opacity-70"
+                                style={{
+                                    fontSize: Math.max(
+                                        10,
+                                        Math.round(fontSize * 0.6),
+                                    ),
+                                }}
+                            >
+                                {when}
+                            </span>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        );
+    }
+
+    if (key === 'event_schedule') {
+        const sessions = Array.isArray(data.sessions) ? data.sessions : [];
+        const fontSize = widgetFontSize(settings, 28);
+        const color = widgetColor(settings);
+
+        return (
+            <div
+                className="flex h-full flex-col gap-3 p-[5%]"
+                style={{ color }}
+            >
+                {settings.heading ? (
+                    <p
+                        className="shrink-0 tracking-[0.2em] uppercase opacity-70"
+                        style={{
+                            fontSize: Math.max(10, Math.round(fontSize * 0.55)),
+                        }}
+                    >
+                        {String(settings.heading)}
+                    </p>
+                ) : null}
+                <div className="flex min-h-0 flex-1 flex-col justify-evenly gap-2">
+                    {sessions.length === 0 ? (
+                        <p className="opacity-70">No sessions listed.</p>
+                    ) : (
+                        sessions.map((session, index) => {
+                            const row =
+                                session && typeof session === 'object'
+                                    ? (session as Record<string, unknown>)
+                                    : {};
+                            const state = String(row.state ?? 'scheduled');
+
+                            return (
+                                <div
+                                    key={index}
+                                    className={`flex items-center gap-4 rounded-xl px-[3%] py-[1.8%] ${
+                                        state === 'live'
+                                            ? 'bg-emerald-500 text-black'
+                                            : state === 'done'
+                                              ? 'bg-white/5 opacity-55'
+                                              : 'bg-white/10'
+                                    }`}
+                                    style={{ fontSize }}
+                                >
+                                    <span className="shrink-0 font-mono tabular-nums">
+                                        {String(row.when ?? '')}
+                                    </span>
+                                    <span className="min-w-0 flex-1 truncate font-medium">
+                                        {String(row.title ?? '')}
+                                    </span>
+                                    <span
+                                        className="shrink-0 opacity-75"
+                                        style={{
+                                            fontSize: Math.max(
+                                                10,
+                                                Math.round(fontSize * 0.65),
+                                            ),
+                                        }}
+                                    >
+                                        {state === 'live'
+                                            ? 'Live now'
+                                            : String(row.room ?? '')}
+                                    </span>
+                                </div>
+                            );
+                        })
+                    )}
+                </div>
+            </div>
+        );
+    }
+
+    return <Fallback title={widgetTitle(key)} body="Widget is configured." />;
+}
+
+/**
+ * WMO weather code to a single glyph, matching Open-Meteo's code ranges.
+ */
+function weatherGlyph(code: number): string {
+    if (!Number.isFinite(code)) {
+        return '—';
+    }
+
+    if (code === 0) {
+        return '☀';
+    }
+
+    if (code <= 2) {
+        return '⛅';
+    }
+
+    if (code === 3) {
+        return '☁';
+    }
+
+    if (code <= 48) {
+        return '🌫';
+    }
+
+    if (code <= 67) {
+        return '🌧';
+    }
+
+    if (code <= 77) {
+        return '❄';
+    }
+
+    if (code <= 82) {
+        return '🌦';
+    }
+
+    if (code <= 86) {
+        return '🌨';
+    }
+
+    return '⛈';
+}
+
+function directionArrow(direction: string): string {
+    switch (direction.trim().toLowerCase()) {
+        case 'left':
+            return '←';
+        case 'right':
+            return '→';
+        case 'up':
+        case 'straight':
+        case 'ahead':
+            return '↑';
+        case 'down':
+        case 'back':
+            return '↓';
+        case 'up-left':
+            return '↖';
+        case 'up-right':
+            return '↗';
+        case 'down-left':
+            return '↙';
+        case 'down-right':
+            return '↘';
+        default:
+            return '•';
+    }
+}
+
+function occasionGlyph(occasion: string): string {
+    const value = occasion.toLowerCase();
+
+    if (value.includes('birthday')) {
+        return '🎂';
+    }
+
+    if (value.includes('anniversary')) {
+        return '🎉';
+    }
+
+    if (value.includes('welcome') || value.includes('joining')) {
+        return '👋';
+    }
+
+    if (value.includes('retire')) {
+        return '🏅';
+    }
+
+    return '⭐';
 }
 
 function Hero({
@@ -972,10 +1881,19 @@ function QueueWidgetSurface({
         <div className="min-h-0 flex-1 space-y-2 overflow-hidden">
             {rows.length === 0 ? (
                 <div className="opacity-60" style={{ fontSize: rowSize }}>
-                    <p>{widgetKey === 'queue_waiting_tickets' ? 'No one waiting' : waiting.length > 0 ? 'Waiting to be called' : 'No one serving'}</p>
-                    {widgetKey !== 'queue_waiting_tickets' && waiting[0]?.number && (
-                        <p className="font-semibold tabular-nums">{String(waiting[0].number)}</p>
-                    )}
+                    <p>
+                        {widgetKey === 'queue_waiting_tickets'
+                            ? 'No one waiting'
+                            : waiting.length > 0
+                              ? 'Waiting to be called'
+                              : 'No one serving'}
+                    </p>
+                    {widgetKey !== 'queue_waiting_tickets' &&
+                        waiting[0]?.number && (
+                            <p className="font-semibold tabular-nums">
+                                {String(waiting[0].number)}
+                            </p>
+                        )}
                 </div>
             ) : (
                 rows.map((row, index) => (
@@ -1029,7 +1947,11 @@ function QueueWidgetSurface({
                 )}
                 detail={String(nowServing[0]?.number ?? '')}
                 fontSize={fontSize}
-                highlight={nowServing[0] ? Number(nowServing[0].id) === highlightedTicketId : false}
+                highlight={
+                    nowServing[0]
+                        ? Number(nowServing[0].id) === highlightedTicketId
+                        : false
+                }
             />
         );
     } else if (widgetKey === 'queue_service_name') {
@@ -1092,19 +2014,46 @@ function QueueWidgetSurface({
             <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,2fr)_minmax(0,1fr)] gap-4">
                 <div className="flex min-h-0 flex-col gap-4">
                     <div className="flex min-h-0 flex-1 flex-col gap-2">
-                        <p className="text-left font-semibold uppercase opacity-70" style={{ fontSize: smallSize }}>Now serving</p>
+                        <p
+                            className="text-left font-semibold uppercase opacity-70"
+                            style={{ fontSize: smallSize }}
+                        >
+                            Now serving
+                        </p>
                         {ticketRows}
                     </div>
                     <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-auto">
-                        <p className="text-left font-semibold uppercase opacity-70" style={{ fontSize: smallSize }}>Waiting</p>
+                        <p
+                            className="text-left font-semibold uppercase opacity-70"
+                            style={{ fontSize: smallSize }}
+                        >
+                            Waiting
+                        </p>
                         {waiting.length === 0 ? (
-                            <p className="opacity-60" style={{ fontSize: smallSize }}>No one waiting</p>
-                        ) : waiting.map((row, index) => (
-                            <div key={String(row.id ?? `${row.number}-${index}`)} className="flex items-center justify-between rounded-xl bg-white/10 px-4 py-2" style={{ fontSize: smallSize }}>
-                                <span className="font-bold tabular-nums">{String(row.number ?? '—')}</span>
-                                <span>#{String(row.position ?? index + 1)}</span>
-                            </div>
-                        ))}
+                            <p
+                                className="opacity-60"
+                                style={{ fontSize: smallSize }}
+                            >
+                                No one waiting
+                            </p>
+                        ) : (
+                            waiting.map((row, index) => (
+                                <div
+                                    key={String(
+                                        row.id ?? `${row.number}-${index}`,
+                                    )}
+                                    className="flex items-center justify-between rounded-xl bg-white/10 px-4 py-2"
+                                    style={{ fontSize: smallSize }}
+                                >
+                                    <span className="font-bold tabular-nums">
+                                        {String(row.number ?? '—')}
+                                    </span>
+                                    <span>
+                                        #{String(row.position ?? index + 1)}
+                                    </span>
+                                </div>
+                            ))
+                        )}
                     </div>
                 </div>
                 <QueueStats stats={stats} fontSize={fontSize} />
@@ -1150,7 +2099,9 @@ function QueueHero({
     highlight?: boolean;
 }) {
     return (
-        <div className={`flex flex-1 flex-col items-center justify-center gap-2 rounded-xl ${highlight ? 'queue-call-blink' : ''}`}>
+        <div
+            className={`flex flex-1 flex-col items-center justify-center gap-2 rounded-xl ${highlight ? 'queue-call-blink' : ''}`}
+        >
             <p
                 className="font-bold tabular-nums"
                 style={{ fontSize, lineHeight: 1.05 }}
@@ -1204,6 +2155,469 @@ function QueueStats({
                     </p>
                 </div>
             ))}
+        </div>
+    );
+}
+
+/**
+ * Browser-chrome poster standing in for a live iframe in gallery previews.
+ */
+function WebPagePoster({ url }: { url: string }) {
+    let host = url;
+
+    try {
+        host = new URL(url).host;
+    } catch {
+        // Keep the raw value when it is not a full URL.
+    }
+
+    return (
+        <div className="flex h-full w-full flex-col overflow-hidden bg-white text-slate-700">
+            <div className="flex h-[9%] min-h-6 shrink-0 items-center gap-[1.2%] bg-slate-200 px-[2%]">
+                <span className="size-[1.4em] rounded-full bg-rose-400" />
+                <span className="size-[1.4em] rounded-full bg-amber-400" />
+                <span className="size-[1.4em] rounded-full bg-emerald-400" />
+                <span className="ml-[2%] flex-1 truncate rounded bg-white px-[2%] text-[2.2em] text-slate-500">
+                    {host}
+                </span>
+            </div>
+            <div className="flex flex-1 flex-col gap-[3%] p-[6%]">
+                <div className="h-[9%] w-2/3 rounded bg-slate-300" />
+                <div className="h-[4%] w-full rounded bg-slate-200" />
+                <div className="h-[4%] w-11/12 rounded bg-slate-200" />
+                <div className="h-[4%] w-4/5 rounded bg-slate-200" />
+                <div className="mt-auto h-[28%] w-full rounded bg-slate-100" />
+            </div>
+        </div>
+    );
+}
+
+/**
+ * Placeholder schedule shown until a room is chosen: a meeting in progress
+ * and two more later, so every part of the sign is visible while designing.
+ */
+function sampleRoomData(now: Date): Record<string, WidgetJsonValue> {
+    const minute = 60_000;
+    const at = (offset: number) => new Date(now.getTime() + offset * minute);
+    const label = (date: Date) =>
+        `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+    const slot = (id: number, title: string, from: number, to: number) => ({
+        id,
+        title,
+        organizer: 'Sample organizer',
+        starts_at: at(from).toISOString(),
+        ends_at: at(to).toISOString(),
+        start_label: label(at(from)),
+        end_label: label(at(to)),
+    });
+
+    return {
+        room: { id: 0, name: 'Meeting room', capacity: 8, location: null },
+        bookings: [
+            slot(1, 'Weekly planning', -15, 45),
+            slot(2, 'Client workshop', 90, 150),
+            slot(3, 'Design review', 210, 240),
+        ],
+        booking_url: null,
+    };
+}
+
+/**
+ * Sample rooms for a board that has not been resolved against real rooms
+ * yet, such as a catalog template in the gallery. A resolved board always
+ * carries a `rooms` array, even when it is empty.
+ */
+function sampleBoardData(now: Date): Record<string, WidgetJsonValue> {
+    const sign = sampleRoomData(now);
+    const minute = 60_000;
+    const shifted = (bookings: WidgetJsonValue, offset: number) =>
+        (Array.isArray(bookings) ? bookings : []).map((booking) => {
+            const row = booking as Record<string, string | number>;
+            const start = new Date(
+                Date.parse(String(row.starts_at)) + offset * minute,
+            );
+            const end = new Date(
+                Date.parse(String(row.ends_at)) + offset * minute,
+            );
+            const label = (date: Date) =>
+                `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+
+            return {
+                ...row,
+                starts_at: start.toISOString(),
+                ends_at: end.toISOString(),
+                start_label: label(start),
+                end_label: label(end),
+            };
+        });
+    const room = (
+        id: number,
+        name: string,
+        color: string,
+        bookings: WidgetJsonValue,
+    ) => ({
+        room: { id, name, color },
+        bookings,
+    });
+
+    return {
+        rooms: [
+            room(1, 'Boardroom', '#2563eb', sign.bookings),
+            room(2, 'Focus room', '#16a34a', shifted(sign.bookings, 90)),
+            room(3, 'Training studio', '#9333ea', shifted(sign.bookings, 5)),
+            room(4, 'Huddle space', '#f59e0b', []),
+            room(5, 'Innovation lab', '#0ea5e9', shifted(sign.bookings, 200)),
+        ],
+    };
+}
+
+function widgetTitle(key: string): string {
+    const text = key.replaceAll('_', ' ');
+
+    return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+const ROOM_STATE_STYLE = {
+    free: { label: 'Available', background: '#15803d', accent: '#86efac' },
+    soon: { label: 'Starting soon', background: '#b45309', accent: '#fde68a' },
+    busy: { label: 'In use', background: '#b91c1c', accent: '#fecaca' },
+} as const;
+
+function screenBookings(value: WidgetJsonValue | undefined): ScreenBooking[] {
+    if (!Array.isArray(value)) {
+        return [];
+    }
+
+    return value.flatMap((item) => {
+        if (!item || typeof item !== 'object' || Array.isArray(item)) {
+            return [];
+        }
+
+        const row = item as Record<string, WidgetJsonValue>;
+
+        if (
+            typeof row.starts_at !== 'string' ||
+            typeof row.ends_at !== 'string'
+        ) {
+            return [];
+        }
+
+        return [
+            {
+                id: Number(row.id ?? 0),
+                title: typeof row.title === 'string' ? row.title : 'Meeting',
+                organizer:
+                    typeof row.organizer === 'string' ? row.organizer : null,
+                starts_at: row.starts_at,
+                ends_at: row.ends_at,
+                start_label:
+                    typeof row.start_label === 'string' ? row.start_label : '',
+                end_label:
+                    typeof row.end_label === 'string' ? row.end_label : '',
+            },
+        ];
+    });
+}
+
+function roomRecord(
+    value: WidgetJsonValue | undefined,
+): Record<string, WidgetJsonValue> {
+    return value && typeof value === 'object' && !Array.isArray(value)
+        ? (value as Record<string, WidgetJsonValue>)
+        : {};
+}
+
+/**
+ * Meeting room door sign. The manifest carries today's bookings; the state
+ * flips between free, starting soon and in use on the player's own clock.
+ */
+function RoomStatusSurface({
+    data,
+    settings,
+    now,
+    staticPreview,
+    notice,
+}: {
+    data: Record<string, WidgetJsonValue>;
+    settings: Record<string, WidgetJsonValue>;
+    now: Date;
+    staticPreview: boolean;
+    /** Shown over a sample sign while the widget is not configured. */
+    notice?: string;
+}) {
+    const room = roomRecord(data.room);
+    const bookings = screenBookings(data.bookings);
+    const soonMinutes = Math.max(0, Number(settings.soon_minutes ?? 10));
+    const state = roomState(bookings, now, soonMinutes);
+    const style = ROOM_STATE_STYLE[state.kind];
+    const upcomingLimit = Math.max(
+        0,
+        Math.min(6, Number(settings.upcoming ?? 3)),
+    );
+    const upcoming = upcomingBookings(
+        bookings,
+        now,
+        upcomingLimit + (state.kind === 'soon' ? 1 : 0),
+    )
+        .filter((item) => state.kind !== 'soon' || item.id !== state.next.id)
+        .slice(0, upcomingLimit);
+    const fontSize = widgetFontSize(settings, 48);
+    const bookingUrl =
+        typeof data.booking_url === 'string' ? data.booking_url : '';
+    const showQr = settings.show_qr !== false && bookingUrl !== '';
+    const small = Math.max(12, Math.round(fontSize * 0.36));
+
+    let headline = 'Free for the rest of the day';
+    let detail = '';
+
+    if (state.kind === 'busy') {
+        headline = state.current.title;
+        detail = [
+            state.current.organizer,
+            `${state.current.start_label}–${state.current.end_label}`,
+            `${formatMinutes(state.minutesLeft)} left`,
+        ]
+            .filter(Boolean)
+            .join('  ·  ');
+    } else if (state.kind === 'soon') {
+        headline = state.next.title;
+        detail = `Starts at ${state.next.start_label}  ·  in ${formatMinutes(state.minutesUntil)}`;
+    } else if (state.next && state.minutesUntil !== null) {
+        headline = `Free until ${state.next.start_label}`;
+        detail = `${formatMinutes(state.minutesUntil)} available`;
+    }
+
+    return (
+        <div
+            className="relative flex h-full w-full overflow-hidden text-white"
+            style={{ background: '#0f172a', fontFamily: 'Arial' }}
+        >
+            {notice ? (
+                <div
+                    role="status"
+                    className="absolute inset-x-0 top-0 z-10 bg-amber-400 px-[3%] py-[1.5%] text-center font-semibold text-amber-950"
+                    style={{
+                        fontSize: Math.max(
+                            12,
+                            Math.round(widgetFontSize(settings, 48) * 0.36),
+                        ),
+                    }}
+                >
+                    Sample preview · {notice}
+                </div>
+            ) : null}
+            <div
+                className="flex min-w-0 flex-[3] flex-col justify-between p-[4%] transition-colors duration-700"
+                style={{ background: style.background }}
+            >
+                <div className="min-w-0">
+                    <p
+                        className="truncate font-semibold"
+                        style={{ fontSize: fontSize * 0.9, lineHeight: 1.1 }}
+                    >
+                        {String(room.name ?? 'Meeting room')}
+                    </p>
+                    <p className="opacity-80" style={{ fontSize: small }}>
+                        {[
+                            room.location ? String(room.location) : null,
+                            room.capacity
+                                ? `${String(room.capacity)} seats`
+                                : null,
+                        ]
+                            .filter(Boolean)
+                            .join('  ·  ')}
+                    </p>
+                </div>
+                <div className="min-w-0 space-y-[2%]">
+                    <p
+                        className="font-bold tracking-[0.12em] uppercase"
+                        style={{
+                            color: style.accent,
+                            fontSize: fontSize * 0.55,
+                        }}
+                    >
+                        {style.label}
+                    </p>
+                    <p
+                        className="line-clamp-2 font-bold"
+                        style={{ fontSize: fontSize * 1.25, lineHeight: 1.05 }}
+                    >
+                        {headline}
+                    </p>
+                    {detail ? (
+                        <p
+                            className="opacity-90"
+                            style={{ fontSize: small * 1.15 }}
+                        >
+                            {detail}
+                        </p>
+                    ) : null}
+                    {state.kind === 'busy' ? (
+                        <div
+                            className="mt-[2%] h-[0.35em] overflow-hidden rounded-full bg-black/25"
+                            style={{ fontSize }}
+                        >
+                            <div
+                                className="h-full rounded-full bg-white/85"
+                                style={{
+                                    width: `${Math.round(state.progress * 100)}%`,
+                                }}
+                            />
+                        </div>
+                    ) : null}
+                </div>
+            </div>
+            <div className="flex min-w-0 flex-[2] flex-col gap-[4%] p-[3.5%]">
+                <p
+                    className="tracking-[0.2em] text-white/60 uppercase"
+                    style={{ fontSize: small }}
+                >
+                    Up next
+                </p>
+                <div className="flex min-h-0 flex-1 flex-col gap-[3%] overflow-hidden">
+                    {upcoming.length === 0 ? (
+                        <p
+                            className="text-white/60"
+                            style={{ fontSize: small * 1.1 }}
+                        >
+                            Nothing else booked today.
+                        </p>
+                    ) : (
+                        upcoming.map((item) => (
+                            <div
+                                key={item.id}
+                                className="rounded-xl bg-white/10 px-[5%] py-[3%]"
+                            >
+                                <p
+                                    className="font-mono text-white/70"
+                                    style={{ fontSize: small }}
+                                >
+                                    {item.start_label}–{item.end_label}
+                                </p>
+                                <p
+                                    className="truncate font-medium"
+                                    style={{ fontSize: small * 1.25 }}
+                                >
+                                    {item.title}
+                                </p>
+                            </div>
+                        ))
+                    )}
+                </div>
+                {showQr ? (
+                    <div className="flex shrink-0 items-center gap-[5%] rounded-xl bg-white p-[4%] text-slate-900">
+                        {staticPreview ? (
+                            <div className="aspect-square w-[34%] shrink-0 bg-slate-200" />
+                        ) : (
+                            <img
+                                alt="Scan to book this room"
+                                className="aspect-square w-[34%] shrink-0"
+                                src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&margin=0&data=${encodeURIComponent(bookingUrl)}`}
+                            />
+                        )}
+                        <p
+                            className="font-semibold"
+                            style={{ fontSize: small * 1.1, lineHeight: 1.15 }}
+                        >
+                            Scan to book this room
+                        </p>
+                    </div>
+                ) : null}
+            </div>
+        </div>
+    );
+}
+
+/**
+ * Lobby board listing every room with a live free / busy pill.
+ */
+function RoomBoardSurface({
+    data,
+    settings,
+    now,
+}: {
+    data: Record<string, WidgetJsonValue>;
+    settings: Record<string, WidgetJsonValue>;
+    now: Date;
+}) {
+    const rooms = Array.isArray(data.rooms) ? data.rooms.map(roomRecord) : [];
+    const fontSize = widgetFontSize(settings, 30);
+    const color = widgetColor(settings);
+    const small = Math.max(10, Math.round(fontSize * 0.6));
+
+    return (
+        <div className="flex h-full flex-col gap-[3%] p-[4%]" style={{ color }}>
+            {settings.heading ? (
+                <p
+                    className="shrink-0 tracking-[0.2em] uppercase opacity-70"
+                    style={{ fontSize: small }}
+                >
+                    {String(settings.heading)}
+                </p>
+            ) : null}
+            {rooms.length === 0 ? (
+                <p className="opacity-70">No rooms to show yet.</p>
+            ) : (
+                <div className="flex min-h-0 flex-1 flex-col justify-evenly gap-[1.5%]">
+                    {rooms.map((entry, index) => {
+                        const room = roomRecord(entry.room);
+                        const state = roomState(
+                            screenBookings(entry.bookings),
+                            now,
+                            10,
+                        );
+                        const style = ROOM_STATE_STYLE[state.kind];
+                        const detail =
+                            state.kind === 'busy'
+                                ? `${state.current.title} · until ${state.current.end_label}`
+                                : state.kind === 'soon'
+                                  ? `${state.next.title} at ${state.next.start_label}`
+                                  : state.next
+                                    ? `Free until ${state.next.start_label}`
+                                    : 'Free all day';
+
+                        return (
+                            <div
+                                key={String(room.id ?? index)}
+                                className="flex items-center gap-[3%] rounded-xl bg-white/10 px-[3%] py-[1.2%]"
+                            >
+                                <span
+                                    className="size-[0.7em] shrink-0 rounded-full"
+                                    style={{
+                                        background: String(
+                                            room.color ?? '#2563eb',
+                                        ),
+                                        fontSize,
+                                    }}
+                                />
+                                <div className="min-w-0 flex-1">
+                                    <p
+                                        className="truncate font-semibold"
+                                        style={{ fontSize }}
+                                    >
+                                        {String(room.name ?? 'Room')}
+                                    </p>
+                                    <p
+                                        className="truncate opacity-70"
+                                        style={{ fontSize: small }}
+                                    >
+                                        {detail}
+                                    </p>
+                                </div>
+                                <span
+                                    className="shrink-0 rounded-full px-[1.2em] py-[0.35em] font-semibold text-white"
+                                    style={{
+                                        background: style.background,
+                                        fontSize: small,
+                                    }}
+                                >
+                                    {style.label}
+                                </span>
+                            </div>
+                        );
+                    })}
+                </div>
+            )}
         </div>
     );
 }

@@ -1,6 +1,10 @@
 import type { PlayerItem, PlayerManifest } from '@/lib/player-runtime';
 import type { PlayerQueueUpdate } from '@/lib/player-echo';
-import type { QueueVoiceLanguage, QueueVoiceSettings, WidgetPayload } from '@/types';
+import type {
+    QueueVoiceLanguage,
+    QueueVoiceSettings,
+    WidgetPayload,
+} from '@/types';
 
 export type QueueVoiceRequest = {
     ticketNumber: string;
@@ -35,15 +39,23 @@ export class QueueAnnouncementQueue {
     ) {}
 
     public enqueue(key: string, request: QueueVoiceRequest): boolean {
-        if (key === '' || this.keys.has(key) || this.recentKeys.has(key) || this.keys.size >= this.maximumPending) {
+        if (
+            key === '' ||
+            this.keys.has(key) ||
+            this.recentKeys.has(key) ||
+            this.keys.size >= this.maximumPending
+        ) {
             return false;
         }
 
-        const immediateChime = request.settings.chime && this.provider.playChime !== undefined;
+        const immediateChime =
+            request.settings.chime && this.provider.playChime !== undefined;
         if (immediateChime) {
             // Start the bell now; it must not wait behind a previous spoken
             // announcement or the configured pause between announcements.
-            void this.provider.playChime!(request.settings.volume).catch(() => undefined);
+            void this.provider.playChime!(request.settings.volume).catch(
+                () => undefined,
+            );
         }
 
         if (request.soundOnly && immediateChime) {
@@ -54,7 +66,12 @@ export class QueueAnnouncementQueue {
         this.keys.add(key);
         this.items.push({
             key,
-            request: immediateChime ? { ...request, settings: { ...request.settings, chime: false } } : request,
+            request: immediateChime
+                ? {
+                      ...request,
+                      settings: { ...request.settings, chime: false },
+                  }
+                : request,
         });
         this.start();
 
@@ -107,7 +124,9 @@ export class QueueAnnouncementQueue {
             }
 
             if (this.items.length > 0 && generation === this.generation) {
-                await this.pause(item.request.settings.announcement_delay_seconds * 1000);
+                await this.pause(
+                    item.request.settings.announcement_delay_seconds * 1000,
+                );
             }
         }
     }
@@ -134,20 +153,61 @@ export class QueueAnnouncementQueue {
 }
 
 const digitWords: Record<QueueVoiceLanguage, string[]> = {
-    'en-US': ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine'],
-    'ar-AE': ['صفر', 'واحد', 'اثنان', 'ثلاثة', 'أربعة', 'خمسة', 'ستة', 'سبعة', 'ثمانية', 'تسعة'],
-    'fil-PH': ['sero', 'isa', 'dalawa', 'tatlo', 'apat', 'lima', 'anim', 'pito', 'walo', 'siyam'],
+    'en-US': [
+        'zero',
+        'one',
+        'two',
+        'three',
+        'four',
+        'five',
+        'six',
+        'seven',
+        'eight',
+        'nine',
+    ],
+    'ar-AE': [
+        'صفر',
+        'واحد',
+        'اثنان',
+        'ثلاثة',
+        'أربعة',
+        'خمسة',
+        'ستة',
+        'سبعة',
+        'ثمانية',
+        'تسعة',
+    ],
+    'fil-PH': [
+        'sero',
+        'isa',
+        'dalawa',
+        'tatlo',
+        'apat',
+        'lima',
+        'anim',
+        'pito',
+        'walo',
+        'siyam',
+    ],
     'hi-IN': ['शून्य', 'एक', 'दो', 'तीन', 'चार', 'पाँच', 'छह', 'सात', 'आठ', 'नौ'],
 };
 
 function spokenValue(value: string, language: QueueVoiceLanguage): string {
     return Array.from(value.trim().toUpperCase())
         .filter((character) => /[A-Z0-9]/.test(character))
-        .map((character) => /\d/.test(character) ? digitWords[language][Number(character)] : character)
+        .map((character) =>
+            /\d/.test(character)
+                ? digitWords[language][Number(character)]
+                : character,
+        )
         .join(' ');
 }
 
-export function announcementText(ticket: string, counter: string, language: QueueVoiceLanguage): string {
+export function announcementText(
+    ticket: string,
+    counter: string,
+    language: QueueVoiceLanguage,
+): string {
     const number = spokenValue(ticket, language);
     const destination = counter
         .replace(/^counter\s*/i, '')
@@ -155,53 +215,152 @@ export function announcementText(ticket: string, counter: string, language: Queu
         .replace(/\d/g, (digit) => digitWords[language][Number(digit)]);
 
     switch (language) {
-        case 'ar-AE': return `التذكرة ${number}، يرجى التوجه إلى الشباك ${destination}.`;
-        case 'fil-PH': return `Ticket ${number}, pumunta po sa Counter ${destination}.`;
-        case 'hi-IN': return `टिकट ${number}, कृपया काउंटर ${destination} पर जाएँ।`;
-        default: return `Ticket ${number}, please proceed to Counter ${destination}.`;
+        case 'ar-AE':
+            return `التذكرة ${number}، يرجى التوجه إلى الشباك ${destination}.`;
+        case 'fil-PH':
+            return `Ticket ${number}, pumunta po sa Counter ${destination}.`;
+        case 'hi-IN':
+            return `टिकट ${number}, कृपया काउंटर ${destination} पर जाएँ।`;
+        default:
+            return `Ticket ${number}, please proceed to Counter ${destination}.`;
     }
 }
 
-function matchesFilter(settings: Record<string, unknown>, key: string, actual: number | null): boolean {
+function matchesFilter(
+    settings: Record<string, unknown>,
+    key: string,
+    actual: number | null,
+): boolean {
     const selected = Number(settings[key] ?? 0);
     return selected === 0 || (actual !== null && selected === actual);
 }
 
-function widgetWantsCallCue(widget: WidgetPayload | null | undefined, update: PlayerQueueUpdate, cue: 'sound' | 'voice'): boolean {
-    if (!widget?.key.startsWith('queue_') || widget.settings[cue] !== true) return false;
+/**
+ * Sound is opt-in per widget. Voice is switched on in Queue Configuration and
+ * a widget can only opt out ("off"); older designs saved true/false, and both
+ * follow Queue Configuration.
+ */
+function widgetEnablesCue(
+    widget: WidgetPayload,
+    cue: 'sound' | 'voice',
+): boolean {
+    return cue === 'voice'
+        ? widget.settings.voice !== 'off'
+        : widget.settings.sound === true;
+}
+
+function widgetWantsCallCue(
+    widget: WidgetPayload | null | undefined,
+    update: PlayerQueueUpdate,
+    cue: 'sound' | 'voice',
+): boolean {
+    if (!widget?.key.startsWith('queue_') || !widgetEnablesCue(widget, cue))
+        return false;
     const settings = widget.settings as Record<string, unknown>;
-    return matchesFilter(settings, 'service_id', update.service_id)
-        && matchesFilter(settings, 'location_id', update.location_id)
-        && matchesFilter(settings, 'counter_id', update.counter_id);
+    return (
+        matchesFilter(settings, 'service_id', update.service_id) &&
+        matchesFilter(settings, 'location_id', update.location_id) &&
+        matchesFilter(settings, 'counter_id', update.counter_id)
+    );
 }
 
-function itemWantsCallCue(item: PlayerItem, update: PlayerQueueUpdate, cue: 'sound' | 'voice'): boolean {
+function itemWantsCallCue(
+    item: PlayerItem,
+    update: PlayerQueueUpdate,
+    cue: 'sound' | 'voice',
+): boolean {
     if (widgetWantsCallCue(item.widget, update, cue)) return true;
-    const elements = (item.document as { elements?: Array<{ widget?: WidgetPayload }> } | null)?.elements ?? [];
-    return elements.some((element) => widgetWantsCallCue(element.widget, update, cue));
+    const elements =
+        (
+            item.document as {
+                elements?: Array<{ widget?: WidgetPayload }>;
+            } | null
+        )?.elements ?? [];
+    return elements.some((element) =>
+        widgetWantsCallCue(element.widget, update, cue),
+    );
 }
 
-function manifestWantsCallCue(manifest: PlayerManifest, update: PlayerQueueUpdate, cue: 'sound' | 'voice'): boolean {
-    const playlists = [manifest.playback.playlist, ...manifest.playback.zones.map((zone) => zone.playlist)];
-    return playlists.some((playlist) => playlist?.items.some((item) => itemWantsCallCue(item, update, cue)) === true);
+function manifestWantsCallCue(
+    manifest: PlayerManifest,
+    update: PlayerQueueUpdate,
+    cue: 'sound' | 'voice',
+): boolean {
+    const playlists = [
+        manifest.playback.playlist,
+        ...manifest.playback.zones.map((zone) => zone.playlist),
+    ];
+    return playlists.some(
+        (playlist) =>
+            playlist?.items.some((item) =>
+                itemWantsCallCue(item, update, cue),
+            ) === true,
+    );
 }
 
-export function manifestWantsQueueSound(manifest: PlayerManifest, update: PlayerQueueUpdate): boolean {
+export function manifestWantsQueueSound(
+    manifest: PlayerManifest,
+    update: PlayerQueueUpdate,
+): boolean {
     return manifestWantsCallCue(manifest, update, 'sound');
 }
 
-export function manifestWantsQueueVoice(manifest: PlayerManifest, update: PlayerQueueUpdate): boolean {
+export function manifestWantsQueueVoice(
+    manifest: PlayerManifest,
+    update: PlayerQueueUpdate,
+): boolean {
     return manifestWantsCallCue(manifest, update, 'voice');
 }
 
 export function shouldAnnounceQueueCall(
     update: PlayerQueueUpdate,
-): update is PlayerQueueUpdate & { ticket_number: string; counter_name: string; called_at: string } {
+): update is PlayerQueueUpdate & {
+    ticket_number: string;
+    counter_name: string;
+    called_at: string;
+} {
     if (update.status !== 'called' && update.status !== 'serving') return false;
-    if (!update.ticket_number || !update.counter_name || !update.called_at) return false;
+    if (!update.ticket_number || !update.counter_name || !update.called_at)
+        return false;
     // Reverb delivers this as a live event. The display and server may have
     // different clocks, so a timestamp age check can silence a real call.
     return Number.isFinite(Date.parse(update.called_at));
+}
+
+function primeSpeech(): void {
+    if (
+        !('speechSynthesis' in window) ||
+        !('SpeechSynthesisUtterance' in window)
+    )
+        return;
+
+    const silent = new SpeechSynthesisUtterance(' ');
+    silent.volume = 0;
+    window.speechSynthesis.speak(silent);
+}
+
+/**
+ * The browser's voices. Chrome loads them asynchronously, so the first call
+ * can be empty; wait briefly for "voiceschanged" so the right language voice
+ * is used rather than the default one.
+ */
+export function availableVoices(
+    timeout = 1500,
+): Promise<SpeechSynthesisVoice[]> {
+    if (!('speechSynthesis' in window)) return Promise.resolve([]);
+
+    const voices = window.speechSynthesis.getVoices();
+    if (voices.length > 0) return Promise.resolve(voices);
+
+    return new Promise((resolve) => {
+        const done = () => {
+            window.clearTimeout(timer);
+            window.speechSynthesis.removeEventListener('voiceschanged', done);
+            resolve(window.speechSynthesis.getVoices());
+        };
+        const timer = window.setTimeout(done, timeout);
+        window.speechSynthesis.addEventListener('voiceschanged', done);
+    });
 }
 
 export class BrowserSpeechVoiceProvider implements QueueVoiceProvider {
@@ -211,6 +370,9 @@ export class BrowserSpeechVoiceProvider implements QueueVoiceProvider {
 
     /** Must be called from a user gesture on browsers that block autoplay. */
     async enableSound(): Promise<boolean> {
+        // Speaking once inside the gesture unlocks speech for later calls
+        // on browsers that require user activation (Chrome, Safari).
+        primeSpeech();
         const context = this.context();
         if (!context) return false;
 
@@ -228,34 +390,53 @@ export class BrowserSpeechVoiceProvider implements QueueVoiceProvider {
         return this.bell(volume);
     }
 
-    async announce({ ticketNumber, counterName, settings, soundOnly = false }: QueueVoiceRequest): Promise<void> {
+    async announce({
+        ticketNumber,
+        counterName,
+        settings,
+        soundOnly = false,
+    }: QueueVoiceRequest): Promise<void> {
         const cancellationVersion = this.cancellationVersion;
 
         if (settings.chime) {
             try {
                 await Promise.race([
                     this.bell(settings.volume),
-                    new Promise<void>((resolve) => window.setTimeout(resolve, 700)),
+                    new Promise<void>((resolve) =>
+                        window.setTimeout(resolve, 700),
+                    ),
                 ]);
             } catch {
                 // Browser autoplay policy may block Web Audio; speech can continue.
             }
         }
-        if (soundOnly || !('speechSynthesis' in window) || !('SpeechSynthesisUtterance' in window)) return;
+        if (
+            soundOnly ||
+            !('speechSynthesis' in window) ||
+            !('SpeechSynthesisUtterance' in window)
+        )
+            return;
 
-        const voices = window.speechSynthesis.getVoices();
+        const voices = await availableVoices();
 
         for (let repeat = 0; repeat < settings.repeat_count; repeat += 1) {
             for (const language of settings.languages) {
                 if (cancellationVersion !== this.cancellationVersion) return;
 
-                const utterance = new SpeechSynthesisUtterance(announcementText(ticketNumber, counterName, language));
+                const utterance = new SpeechSynthesisUtterance(
+                    announcementText(ticketNumber, counterName, language),
+                );
                 utterance.lang = language;
                 utterance.rate = settings.speed;
                 utterance.volume = settings.volume;
-                utterance.voice = voices.find((voice) => voice.name === settings.voice)
-                    ?? voices.find((voice) => voice.lang.toLowerCase().startsWith(language.slice(0, 2).toLowerCase()))
-                    ?? null;
+                utterance.voice =
+                    voices.find((voice) => voice.name === settings.voice) ??
+                    voices.find((voice) =>
+                        voice.lang
+                            .toLowerCase()
+                            .startsWith(language.slice(0, 2).toLowerCase()),
+                    ) ??
+                    null;
                 await this.speak(utterance);
             }
         }
@@ -284,6 +465,9 @@ export class BrowserSpeechVoiceProvider implements QueueVoiceProvider {
             this.pendingSpeech.add(finish);
             utterance.onend = finish;
             utterance.onerror = finish;
+            // Chrome can leave the speech engine paused after the tab was in
+            // the background; resuming first keeps calls from going silent.
+            window.speechSynthesis.resume();
             window.speechSynthesis.speak(utterance);
         });
     }
@@ -304,15 +488,25 @@ export class BrowserSpeechVoiceProvider implements QueueVoiceProvider {
 
         // Strike immediately, then a softer second note. Short decaying
         // overtones keep the cue audible without delaying the spoken call.
-        for (const [note, delay, strength] of [[784, 0, 1], [587.33, 0.18, 0.7]]) {
-            for (const [multiple, level] of [[1, 0.28], [2.01, 0.09], [3.93, 0.025]]) {
+        for (const [note, delay, strength] of [
+            [784, 0, 1],
+            [587.33, 0.18, 0.7],
+        ]) {
+            for (const [multiple, level] of [
+                [1, 0.28],
+                [2.01, 0.09],
+                [3.93, 0.025],
+            ]) {
                 const oscillator = context.createOscillator();
                 const gain = context.createGain();
                 const strike = start + delay;
                 oscillator.type = 'sine';
                 oscillator.frequency.value = note * multiple;
                 gain.gain.setValueAtTime(0.0001, strike);
-                gain.gain.linearRampToValueAtTime(Math.max(0.0001, level * strength * loudness), strike + 0.006);
+                gain.gain.linearRampToValueAtTime(
+                    Math.max(0.0001, level * strength * loudness),
+                    strike + 0.006,
+                );
                 gain.gain.exponentialRampToValueAtTime(0.0001, strike + 0.4);
                 oscillator.connect(gain);
                 gain.connect(context.destination);
@@ -329,8 +523,10 @@ export class BrowserSpeechVoiceProvider implements QueueVoiceProvider {
     }
 
     private context(): AudioContext | null {
-        const AudioContextClass = window.AudioContext
-            ?? (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+        const AudioContextClass =
+            window.AudioContext ??
+            (window as Window & { webkitAudioContext?: typeof AudioContext })
+                .webkitAudioContext;
         if (!AudioContextClass) return null;
         this.audioContext ??= new AudioContextClass();
         return this.audioContext;

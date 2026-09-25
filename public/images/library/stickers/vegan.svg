@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 320" width="320" height="320" role="img" aria-label="Vegan leaf">
+  <circle cx="160" cy="160" r="150" fill="#ecfccb" stroke="#65a30d" stroke-width="12"/>
+  <path d="M160 250 C 90 200, 80 120, 190 70 C 230 140, 220 210, 160 250 Z" fill="#65a30d"/>
+  <path d="M160 250 C 170 180, 180 130, 190 70" fill="none" stroke="#ecfccb" stroke-width="6" stroke-linecap="round"/>
+</svg>

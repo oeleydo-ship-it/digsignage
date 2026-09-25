@@ -31,6 +31,19 @@ export const WIDGET_KEYS = [
     'alert_banner',
     'world_clock',
     'table',
+    'analog_clock',
+    'weather_forecast',
+    'metric_tiles',
+    'progress_goal',
+    'gauge',
+    'quote',
+    'safety_counter',
+    'image_gallery',
+    'directory',
+    'celebrations',
+    'event_schedule',
+    'room_status',
+    'room_board',
 ] as const;
 
 export type WidgetKey = (typeof WIDGET_KEYS)[number];

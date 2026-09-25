@@ -9,6 +9,8 @@ use App\Http\Controllers\Platform\ImpersonationController;
 use App\Http\Controllers\Platform\JobController;
 use App\Http\Controllers\Platform\OrganizationController;
 use App\Http\Controllers\Platform\PlanController;
+use App\Http\Controllers\Platform\PlatformSettingsController;
+use App\Http\Controllers\Platform\ReleaseController;
 use App\Http\Controllers\Platform\ScreenController;
 use App\Http\Controllers\Platform\StorageController;
 use App\Http\Controllers\Platform\SubscriptionController;
@@ -66,4 +68,20 @@ Route::prefix('platform')
         Route::delete('announcements/{announcement}', [AnnouncementController::class, 'destroy'])->name('announcements.destroy');
 
         Route::get('audits', [AuditController::class, 'index'])->name('audits.index');
+
+        Route::get('settings', [PlatformSettingsController::class, 'index'])->name('settings.index');
+        Route::put('settings/general', [PlatformSettingsController::class, 'updateGeneral'])->name('settings.general');
+        Route::post('settings/branding', [PlatformSettingsController::class, 'updateBranding'])->name('settings.branding');
+        Route::put('settings/payments', [PlatformSettingsController::class, 'updatePayments'])->name('settings.payments');
+        Route::post('settings/payments/test', [PlatformSettingsController::class, 'testPayments'])->middleware('throttle:10,1')->name('settings.payments.test');
+        Route::put('settings/mail', [PlatformSettingsController::class, 'updateMail'])->name('settings.mail');
+        Route::post('settings/mail/test', [PlatformSettingsController::class, 'testMail'])->middleware('throttle:5,1')->name('settings.mail.test');
+
+        Route::get('updates', [ReleaseController::class, 'index'])->name('updates.index');
+        Route::post('updates/upload', [ReleaseController::class, 'upload'])->middleware('throttle:10,1')->name('updates.upload');
+        Route::post('updates/github', [ReleaseController::class, 'installFromGitHub'])->middleware('throttle:10,1')->name('updates.github');
+        Route::post('updates/{release}/install', [ReleaseController::class, 'install'])->middleware('throttle:10,1')->name('updates.install');
+        Route::post('updates/{release}/rollback', [ReleaseController::class, 'rollback'])->middleware('throttle:10,1')->name('updates.rollback');
+        Route::delete('updates/{release}', [ReleaseController::class, 'destroy'])->name('updates.destroy');
+        Route::get('updates/{release}/log', [ReleaseController::class, 'log'])->name('updates.log');
     });

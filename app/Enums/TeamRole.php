@@ -103,6 +103,10 @@ enum TeamRole: string
                 TeamPermission::ArchiveContent,
                 TeamPermission::ViewAuditLogs,
                 TeamPermission::ManageBilling,
+                TeamPermission::ViewBookings,
+                TeamPermission::CreateBooking,
+                TeamPermission::ManageBookings,
+                TeamPermission::ManageRooms,
             ],
             self::ContentManager => [
                 TeamPermission::ViewLocations,
@@ -133,6 +137,8 @@ enum TeamRole: string
                 TeamPermission::ViewQueue,
                 TeamPermission::SubmitContent,
                 TeamPermission::ApproveContent,
+                TeamPermission::ViewBookings,
+                TeamPermission::CreateBooking,
             ],
             self::Publisher => [
                 TeamPermission::ViewLocations,
@@ -150,6 +156,8 @@ enum TeamRole: string
                 TeamPermission::ViewQueue,
                 TeamPermission::PublishContent,
                 TeamPermission::ArchiveContent,
+                TeamPermission::ViewBookings,
+                TeamPermission::CreateBooking,
             ],
             self::Member => [
                 TeamPermission::ViewLocations,
@@ -166,6 +174,8 @@ enum TeamRole: string
                 TeamPermission::CallQueue,
                 TeamPermission::TransferQueue,
                 TeamPermission::CompleteQueue,
+                TeamPermission::ViewBookings,
+                TeamPermission::CreateBooking,
             ],
             self::BranchManager => [
                 TeamPermission::ViewLocations,
@@ -182,6 +192,10 @@ enum TeamRole: string
                 TeamPermission::ManageQueueAppointments,
                 TeamPermission::ViewQueueReports,
                 TeamPermission::ManageQueueSettings,
+                TeamPermission::ViewBookings,
+                TeamPermission::CreateBooking,
+                TeamPermission::ManageBookings,
+                TeamPermission::ManageRooms,
             ],
             self::QueueSupervisor => [
                 TeamPermission::ViewLocations,
@@ -196,16 +210,20 @@ enum TeamRole: string
                 TeamPermission::ManageQueueKiosks,
                 TeamPermission::ManageQueueAppointments,
                 TeamPermission::ViewQueueReports,
+                TeamPermission::ViewBookings,
+                TeamPermission::CreateBooking,
             ],
             self::CounterStaff => [
                 TeamPermission::ViewQueue,
                 TeamPermission::CallQueue,
                 TeamPermission::TransferQueue,
                 TeamPermission::CompleteQueue,
+                TeamPermission::ViewBookings,
             ],
             self::ReportingUser => [
                 TeamPermission::ViewQueue,
                 TeamPermission::ViewQueueReports,
+                TeamPermission::ViewBookings,
             ],
         };
     }

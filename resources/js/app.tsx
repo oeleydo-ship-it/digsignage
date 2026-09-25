@@ -18,6 +18,7 @@ void createInertiaApp({
             case name === 'queue/desk':
             case name === 'queue/kiosk-serve':
             case name.startsWith('queue/virtual-'):
+            case name === 'bookings/public-book':
             case name === 'designs/preview':
             case name === 'templates/preview':
                 return null;

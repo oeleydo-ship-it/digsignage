@@ -10,9 +10,4 @@ class SmsQueueNotificationProvider extends WebhookQueueNotificationProvider
     {
         return QueueNotificationChannel::Sms;
     }
-
-    protected function endpoint(): ?string
-    {
-        return config('queue-notifications.providers.sms');
-    }
 }

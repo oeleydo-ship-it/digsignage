@@ -31,6 +31,15 @@ export default defineConfig({
     server: {
         host: '127.0.0.1',
         port: 5173,
+        // Transform the shell every page needs as soon as the server starts,
+        // so the first page load does not wait on it.
+        warmup: {
+            clientFiles: [
+                './resources/js/app.tsx',
+                './resources/js/layouts/**/*.tsx',
+                './resources/js/components/app-*.tsx',
+            ],
+        },
         watch: {
             ignored: [
                 '**/.agents/**',
@@ -38,6 +47,10 @@ export default defineConfig({
                 '**/.cursor/**',
                 '**/.junie/**',
                 '**/vendor/**',
+                // Logs, sessions and cache churn constantly in development.
+                '**/storage/**',
+                '**/bootstrap/cache/**',
+                '**/database/*.sqlite*',
             ],
         },
     },

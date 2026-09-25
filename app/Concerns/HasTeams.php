@@ -3,6 +3,7 @@
 namespace App\Concerns;
 
 use App\Data\BillingPermissions;
+use App\Data\BookingPermissions;
 use App\Data\ChannelPermissions;
 use App\Data\DesignPermissions;
 use App\Data\EmergencyPermissions;
@@ -322,9 +323,9 @@ trait HasTeams
     /**
      * Get queue management permissions for a team.
      */
-    public function toQueuePermissions(Team $team): QueuePermissions
+    public function toQueuePermissions(Team $team, ?TeamRole $role = null): QueuePermissions
     {
-        $role = $this->teamRole($team);
+        $role ??= $this->teamRole($team);
 
         return new QueuePermissions(
             canViewQueue: $role?->hasPermission(TeamPermission::ViewQueue) ?? false,
@@ -343,11 +344,26 @@ trait HasTeams
     }
 
     /**
+     * Get room booking permissions for a team.
+     */
+    public function toBookingPermissions(Team $team, ?TeamRole $role = null): BookingPermissions
+    {
+        $role ??= $this->teamRole($team);
+
+        return new BookingPermissions(
+            canViewBookings: $role?->hasPermission(TeamPermission::ViewBookings) ?? false,
+            canCreateBooking: $role?->hasPermission(TeamPermission::CreateBooking) ?? false,
+            canManageBookings: $role?->hasPermission(TeamPermission::ManageBookings) ?? false,
+            canManageRooms: $role?->hasPermission(TeamPermission::ManageRooms) ?? false,
+        );
+    }
+
+    /**
      * Get billing permissions for a team.
      */
-    public function toBillingPermissions(Team $team): BillingPermissions
+    public function toBillingPermissions(Team $team, ?TeamRole $role = null): BillingPermissions
     {
-        $role = $this->teamRole($team);
+        $role ??= $this->teamRole($team);
 
         return new BillingPermissions(
             canManageBilling: $role?->hasPermission(TeamPermission::ManageBilling) ?? false,

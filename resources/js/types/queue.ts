@@ -231,6 +231,48 @@ export type QueueCustomerNotificationSettings = {
     channels: Array<{ value: string; label: string }>;
     rules: Record<string, Record<string, boolean>>;
     appointment_minutes_before: number;
+    providers: Record<QueueNotificationChannelKey, QueueNotificationProvider>;
+    templates: Record<string, QueueNotificationTemplate>;
+    default_templates: Record<string, QueueNotificationTemplate>;
+    placeholders: Record<string, string>;
+    deliveries: QueueNotificationDeliveryRecord[];
+    webhook_signature_header: string;
+};
+
+export type QueueNotificationChannelKey = 'sms' | 'whatsapp' | 'email' | 'push';
+
+export type QueueNotificationTemplate = { subject: string; body: string };
+
+/** Channel setup; secrets arrive only as has_* flags. */
+export type QueueNotificationProvider = {
+    status: { ready: boolean; label: string };
+    driver?: 'twilio' | 'meta' | 'webhook' | null;
+    twilio_sid?: string | null;
+    twilio_from?: string | null;
+    has_twilio_token?: boolean;
+    meta_phone_number_id?: string | null;
+    has_meta_token?: boolean;
+    meta_template?: string | null;
+    meta_template_language?: string | null;
+    webhook_url?: string | null;
+    has_webhook_secret?: boolean;
+    from_env?: boolean;
+    enabled?: boolean;
+    reply_to?: string | null;
+};
+
+export type QueueNotificationDeliveryRecord = {
+    id: number;
+    event: string;
+    channel: QueueNotificationChannelKey;
+    channel_label: string;
+    destination: string | null;
+    ticket: string | null;
+    status: 'pending' | 'sent' | 'failed' | 'skipped';
+    error: string | null;
+    attempts: number;
+    created_at: string | null;
+    sent_at: string | null;
 };
 
 export type QueuePriorityRecord = {

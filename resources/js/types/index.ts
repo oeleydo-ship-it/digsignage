@@ -3,6 +3,7 @@ export type * from './approval';
 export type * from './audit';
 export type * from './auth';
 export type * from './billing';
+export type * from './booking';
 export type * from './channel';
 export type * from './design';
 export type * from './emergency';

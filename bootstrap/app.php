@@ -3,8 +3,9 @@
 use App\Http\Middleware\AuthenticateDevice;
 use App\Http\Middleware\AuthenticatePartnerApiToken;
 use App\Http\Middleware\DenyWhileImpersonating;
-use App\Http\Middleware\EnsurePlatformAdmin;
 use App\Http\Middleware\EnsureInitialAdmin;
+use App\Http\Middleware\EnsurePlatformAdmin;
+use App\Http\Middleware\EnsureRegistrationOpen;
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\LogQueueApiRequest;
@@ -48,6 +49,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->web(prepend: [EnsureInitialAdmin::class], append: [
             HandleAppearance::class,
             HandleInertiaRequests::class,
+            EnsureRegistrationOpen::class,
             // Vite already renders preload tags; an unbounded Link header exceeds
             // common nginx FastCGI buffers and makes the login page return 502.
             SetTeamUrlDefaults::class,

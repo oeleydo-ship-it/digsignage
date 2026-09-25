@@ -7,8 +7,19 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import ColorInput from '@/components/color-input';
 import DesignerImageUpload from '@/components/designer-image-upload';
 import { FullscreenCanvasPreview } from '@/components/canvas-preview';
+import DesignerArrange from '@/components/designer-arrange';
+import DesignerPalette from '@/components/designer-palette';
+import DesignerGraphics, {
+    type GraphicInsert,
+} from '@/components/designer-graphics';
 import DesignerProperties from '@/components/designer-properties';
 import { nextDesignLayer } from '@/lib/design-layers';
+import { defaultElementSize } from '@/lib/designer-sizes';
+import {
+    cloneForCanvas,
+    copyElement,
+    readClipboard,
+} from '@/lib/designer-clipboard';
 import KonvaDesigner from '@/components/konva-designer';
 import { Button } from '@/components/ui/button';
 import {
@@ -117,6 +128,14 @@ function defaultProps(
             };
         case 'qr_code':
             return { value: 'https://example.com' };
+        case 'icon':
+            return {
+                icon: 'star',
+                color: '#ffffff',
+                strokeWidth: 2,
+                background: 'transparent',
+                badgeShape: 'circle',
+            };
         case 'web_page':
         case 'iframe':
         case 'live_stream':
@@ -282,16 +301,51 @@ export default function DesignEditor({
         type: string,
         position?: { x: number; y: number },
         mediaItem?: DesignMedia,
+        overrides?: GraphicInsert,
     ) => {
         const document = documentRef.current;
         if (!canEdit || document.elements.length >= 200) return;
+
+        if (overrides?.fullCanvas) {
+            const lowest = Math.min(
+                0,
+                ...document.elements.map((item) => item.zIndex),
+            );
+            const background: DesignDocumentElement = {
+                id: crypto.randomUUID(),
+                type,
+                name: overrides.name ?? 'Background',
+                x: 0,
+                y: 0,
+                width: document.width,
+                height: document.height,
+                rotation: 0,
+                opacity: 1,
+                zIndex: lowest - 1,
+                locked: false,
+                hidden: false,
+                props: { ...defaultProps(type, widgets), ...overrides.props },
+            };
+            commit({
+                ...document,
+                elements: [...document.elements, background],
+            });
+            setSelectedId(background.id);
+
+            return;
+        }
+
+        const preset =
+            overrides?.width || mediaItem
+                ? null
+                : defaultElementSize(type, document.width, document.height);
         const naturalWidth =
-            mediaItem?.width ?? (type === 'ticker' ? 800 : 320);
+            overrides?.width ?? mediaItem?.width ?? preset?.width ?? 320;
         const naturalHeight =
-            mediaItem?.height ?? (type === 'ticker' ? 80 : 180);
+            overrides?.height ?? mediaItem?.height ?? preset?.height ?? 180;
         const width = Math.max(
             MIN_SIZE,
-            Math.min(document.width * 0.5, naturalWidth),
+            Math.min(document.width * (preset ? 0.9 : 0.5), naturalWidth),
         );
         const height = Math.max(
             MIN_SIZE,
@@ -302,7 +356,8 @@ export default function DesignEditor({
         const element: DesignDocumentElement = {
             id: crypto.randomUUID(),
             type,
-            name: mediaItem?.name ?? type.replaceAll('_', ' '),
+            name:
+                overrides?.name ?? mediaItem?.name ?? type.replaceAll('_', ' '),
             x: clamp(snap(position?.x ?? 80, grid), 0, document.width - width),
             y: clamp(
                 snap(position?.y ?? 80, grid),
@@ -312,7 +367,7 @@ export default function DesignEditor({
             width: Math.min(width, document.width),
             height: Math.min(height, document.height),
             rotation: 0,
-            opacity: 1,
+            opacity: overrides?.opacity ?? 1,
             zIndex: nextDesignLayer(document.elements),
             locked: false,
             hidden: false,
@@ -322,7 +377,7 @@ export default function DesignEditor({
                       media_id: mediaItem.id,
                       src: mediaSource(mediaItem),
                   }
-                : defaultProps(type, widgets),
+                : { ...defaultProps(type, widgets), ...overrides?.props },
         };
         commit({ ...document, elements: [...document.elements, element] });
         setSelectedId(element.id);
@@ -492,6 +547,45 @@ export default function DesignEditor({
             )
                 return;
             if (canEdit && (event.ctrlKey || event.metaKey)) {
+                const key = event.key.toLowerCase();
+
+                if (key === 'c' && selected) {
+                    event.preventDefault();
+                    copyElement(selected);
+
+                    return;
+                }
+
+                if (key === 'v') {
+                    const copied = readClipboard();
+
+                    if (copied) {
+                        event.preventDefault();
+                        const pasted = cloneForCanvas(
+                            copied,
+                            documentRef.current,
+                        );
+                        commit({
+                            ...documentRef.current,
+                            elements: [...documentRef.current.elements, pasted],
+                        });
+                        setSelectedId(pasted.id);
+                    }
+
+                    return;
+                }
+
+                if (key === 'd' && selected) {
+                    event.preventDefault();
+                    const copy = cloneForCanvas(selected, documentRef.current);
+                    commit({
+                        ...documentRef.current,
+                        elements: [...documentRef.current.elements, copy],
+                    });
+                    setSelectedId(copy.id);
+
+                    return;
+                }
                 if (event.key.toLowerCase() === 'z') {
                     event.preventDefault();
                     if (event.shiftKey) redo();
@@ -546,13 +640,6 @@ export default function DesignEditor({
         window.addEventListener('keydown', onKeyDown);
         return () => window.removeEventListener('keydown', onKeyDown);
     });
-
-    const standardElementTypes = elementTypes.filter(
-        (type) => !type.value.startsWith('queue_'),
-    );
-    const queueElementTypes = elementTypes.filter((type) =>
-        type.value.startsWith('queue_'),
-    );
 
     return (
         <>
@@ -686,6 +773,17 @@ export default function DesignEditor({
                     >
                         Redo
                     </Button>
+                    <span aria-hidden className="bg-border mx-1 h-6 w-px" />
+                    <DesignerArrange
+                        document={document}
+                        selected={selected}
+                        disabled={!canEdit}
+                        onApply={(patch) => updateSelected(patch)}
+                        onReorder={(elements) =>
+                            commit({ ...documentRef.current, elements })
+                        }
+                    />
+                    <span aria-hidden className="bg-border mx-1 h-6 w-px" />
                     <Label className="text-xs">Zoom</Label>
                     <Input
                         type="range"
@@ -753,58 +851,28 @@ export default function DesignEditor({
                             <p className="text-muted-foreground px-2 pb-2 text-xs font-medium uppercase">
                                 Elements · drag to canvas
                             </p>
-                            <div className="grid grid-cols-2 gap-1">
-                                {standardElementTypes.map((type) => (
-                                    <Button
-                                        key={type.value}
-                                        variant="ghost"
-                                        className="h-9 justify-start px-2 text-xs"
-                                        disabled={!canEdit}
-                                        draggable={canEdit}
-                                        onDragStart={(event) =>
-                                            event.dataTransfer.setData(
-                                                'application/x-design-element',
-                                                type.value,
-                                            )
-                                        }
-                                        onClick={() => addElement(type.value)}
-                                    >
-                                        {type.label}
-                                    </Button>
-                                ))}
+                            <DesignerPalette
+                                elementTypes={elementTypes}
+                                disabled={!canEdit}
+                                draggable={canEdit}
+                                onAdd={(type) => addElement(type)}
+                            />
+                            <p className="text-muted-foreground mt-5 px-2 pb-2 text-xs font-medium uppercase">
+                                Graphics
+                            </p>
+                            <div className="px-1">
+                                <DesignerGraphics
+                                    disabled={!canEdit}
+                                    onInsert={(type, insert) =>
+                                        addElement(
+                                            type,
+                                            undefined,
+                                            undefined,
+                                            insert,
+                                        )
+                                    }
+                                />
                             </div>
-                            {queueElementTypes.length > 0 && (
-                                <>
-                                    <p className="text-muted-foreground mt-5 px-2 pb-2 text-xs font-medium uppercase">
-                                        Queue
-                                    </p>
-                                    <div className="grid grid-cols-2 gap-1">
-                                        {queueElementTypes.map((type) => (
-                                            <Button
-                                                key={type.value}
-                                                variant="ghost"
-                                                className="h-auto min-h-9 justify-start px-2 py-2 text-left text-xs whitespace-normal"
-                                                disabled={!canEdit}
-                                                draggable={canEdit}
-                                                onDragStart={(event) =>
-                                                    event.dataTransfer.setData(
-                                                        'application/x-design-element',
-                                                        type.value,
-                                                    )
-                                                }
-                                                onClick={() =>
-                                                    addElement(type.value)
-                                                }
-                                            >
-                                                {type.label.replace(
-                                                    'Queue · ',
-                                                    '',
-                                                )}
-                                            </Button>
-                                        ))}
-                                    </div>
-                                </>
-                            )}
                             <p className="text-muted-foreground mt-5 px-2 pb-2 text-xs font-medium uppercase">
                                 Media library
                             </p>
@@ -1144,19 +1212,32 @@ export default function DesignEditor({
                                                 <Label>Video fit</Label>
                                                 <select
                                                     className="border-input bg-background h-9 w-full rounded-md border px-2"
-                                                    value={String(selected.props.objectFit ?? 'cover')}
-                                                    disabled={!canEdit || selected.locked}
+                                                    value={String(
+                                                        selected.props
+                                                            .objectFit ??
+                                                            'cover',
+                                                    )}
+                                                    disabled={
+                                                        !canEdit ||
+                                                        selected.locked
+                                                    }
                                                     onChange={(event) =>
                                                         updateSelected({
                                                             props: {
                                                                 ...selected.props,
-                                                                objectFit: event.target.value,
+                                                                objectFit:
+                                                                    event.target
+                                                                        .value,
                                                             },
                                                         })
                                                     }
                                                 >
-                                                    <option value="cover">Fill block (crop)</option>
-                                                    <option value="contain">Fit inside block</option>
+                                                    <option value="cover">
+                                                        Fill block (crop)
+                                                    </option>
+                                                    <option value="contain">
+                                                        Fit inside block
+                                                    </option>
                                                 </select>
                                             </>
                                         )}

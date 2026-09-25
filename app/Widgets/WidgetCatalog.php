@@ -2,9 +2,13 @@
 
 namespace App\Widgets;
 
+use App\Enums\PlanFeature;
+use App\Models\MeetingRoom;
 use App\Support\ContentApps;
 use App\Support\QueueSnapshot;
+use App\Support\RoomAvailability;
 use App\Support\SafeOutboundHttp;
+use App\Support\TeamQuota;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Http;
 use SimpleXMLElement;
@@ -189,7 +193,289 @@ final class WidgetCatalog
                 new WidgetField('cities', 'textarea', 'Cities (Name | Timezone)', "Dubai | Asia/Dubai\nLondon | Europe/London\nNew York | America/New_York", true),
                 ...self::textStyleFields(48),
             ]),
+            new SchemaWidget('room_status', 'Room Status', 'Live meeting room door sign: free or busy, current and next meetings, and a QR code to book.', [
+                new WidgetField('room_id', 'select', 'Room', '0', true, [
+                    ['value' => '0', 'label' => 'Choose a room'],
+                ], 'Rooms are managed under Room booking.'),
+                new WidgetField('show_qr', 'boolean', 'Show "Scan to book" QR code', true, false, [], 'Needs public booking switched on for the room.'),
+                new WidgetField('upcoming', 'number', 'Upcoming meetings to list', 3, false, [], 'Between 0 and 6.'),
+                new WidgetField('soon_minutes', 'number', 'Show "starting soon" this many minutes before', 10, false),
+                new WidgetField('fontSize', 'number', 'Font size', 48, false, [], 'Pixels, 8 to 200.'),
+            ], [self::class, 'roomStatus']),
+            new SchemaWidget('room_board', 'Room Availability Board', 'Every meeting room with live free/busy status for lobbies and corridors.', [
+                new WidgetField('heading', 'string', 'Heading', 'Meeting rooms', false),
+                new WidgetField('location_id', 'select', 'Location', '0', false, [
+                    ['value' => '0', 'label' => 'All locations'],
+                ]),
+                new WidgetField('limit', 'number', 'Rooms to show', 8, false, [], 'Between 1 and 20.'),
+                ...self::textStyleFields(30),
+            ], [self::class, 'roomBoard']),
+            new SchemaWidget('analog_clock', 'Analog Clock', 'Traditional clock face using the screen timezone.', [
+                new WidgetField('face', 'select', 'Face', 'dark', true, [
+                    ['value' => 'dark', 'label' => 'Dark'],
+                    ['value' => 'light', 'label' => 'Light'],
+                    ['value' => 'minimal', 'label' => 'Minimal'],
+                ]),
+                new WidgetField('show_seconds', 'boolean', 'Second hand', true, false),
+                new WidgetField('label', 'string', 'Label', '', false),
+                new WidgetField('color', 'color', 'Accent color', '#38bdf8'),
+            ]),
+            new SchemaWidget('weather_forecast', 'Weather Forecast', 'Multi-day outlook for a city.', [
+                new WidgetField('location', 'string', 'Location', 'Dubai', true),
+                new WidgetField('units', 'select', 'Units', 'celsius', true, [
+                    ['value' => 'celsius', 'label' => 'Celsius'],
+                    ['value' => 'fahrenheit', 'label' => 'Fahrenheit'],
+                ]),
+                new WidgetField('days', 'number', 'Days', 5, false, [], 'Between 2 and 7.'),
+                ...self::textStyleFields(32),
+            ], [self::class, 'weatherForecast']),
+            new SchemaWidget('metric_tiles', 'Metric Tiles', 'Grid of KPI values with an optional change indicator.', [
+                new WidgetField('heading', 'string', 'Heading', 'This week', false),
+                new WidgetField('metrics', 'textarea', 'Metrics (label | value | change)', "Visitors | 1,284 | +12%\nOrders | 316 | +4%\nNPS | 61 | -2", true),
+                new WidgetField('columns', 'number', 'Columns', 2, false, [], 'Between 1 and 4.'),
+                ...self::textStyleFields(48),
+            ]),
+            new SchemaWidget('progress_goal', 'Goal Progress', 'Progress bars towards a target.', [
+                new WidgetField('heading', 'string', 'Heading', 'Quarter to date', false),
+                new WidgetField('goals', 'textarea', 'Goals (label | value | target)', "Revenue | 820 | 1000\nSignups | 340 | 500\nTraining hours | 96 | 120", true),
+                new WidgetField('suffix', 'string', 'Value suffix', '', false),
+                ...self::textStyleFields(28),
+            ]),
+            new SchemaWidget('gauge', 'Gauge', 'Radial gauge for a single measurement.', [
+                new WidgetField('label', 'string', 'Label', 'Capacity', false),
+                new WidgetField('value', 'number', 'Value', 68, true),
+                new WidgetField('min', 'number', 'Minimum', 0, false),
+                new WidgetField('max', 'number', 'Maximum', 100, false),
+                new WidgetField('suffix', 'string', 'Suffix', '%', false),
+                new WidgetField('color', 'color', 'Arc color', '#22d3ee'),
+                new WidgetField('fontSize', 'number', 'Font size', 64, false, [], 'Pixels, 8 to 200.'),
+            ]),
+            new SchemaWidget('quote', 'Quote', 'Rotating quotations or values statements.', [
+                new WidgetField('quotes', 'textarea', 'Quotes (text | attribution)', "Design is how it works. | Steve Jobs\nSimplicity is the ultimate sophistication. | Leonardo da Vinci", true),
+                new WidgetField('rotate_seconds', 'number', 'Seconds per quote', 12, false),
+                ...self::textStyleFields(44),
+            ]),
+            new SchemaWidget('safety_counter', 'Safety Counter', 'Days since the last recordable incident.', [
+                new WidgetField('since', 'datetime', 'Counting since', '', true),
+                new WidgetField('label', 'string', 'Label', 'Days without an incident', false),
+                new WidgetField('record', 'number', 'Best record', 0, false, [], 'Shown underneath when above zero.'),
+                ...self::textStyleFields(140),
+            ], [self::class, 'safetyCounter']),
+            new SchemaWidget('image_gallery', 'Image Gallery', 'Rotating images from media URLs.', [
+                new WidgetField('images', 'textarea', 'Image URLs (one per line)', '', true, [], 'Paste media file URLs or absolute https links.'),
+                new WidgetField('rotate_seconds', 'number', 'Seconds per image', 8, false),
+                new WidgetField('objectFit', 'select', 'Framing', 'cover', false, [
+                    ['value' => 'cover', 'label' => 'Fill block'],
+                    ['value' => 'contain', 'label' => 'Show full image'],
+                ]),
+                new WidgetField('caption', 'boolean', 'Show file name caption', false, false),
+            ]),
+            new SchemaWidget('directory', 'Wayfinding Directory', 'Departments with a floor and a direction arrow.', [
+                new WidgetField('heading', 'string', 'Heading', 'Directory', false),
+                new WidgetField('entries', 'textarea', 'Entries (name | location | direction)', "Radiology | Level 2 | right\nPharmacy | Ground floor | left\nEmergency | Level 1 | up", true),
+                ...self::textStyleFields(30),
+            ]),
+            new SchemaWidget('celebrations', 'Celebrations', 'Birthdays, anniversaries, and welcomes.', [
+                new WidgetField('heading', 'string', 'Heading', 'Celebrating this week', false),
+                new WidgetField('people', 'textarea', 'People (name | occasion | when)', "Amara Osei | Work anniversary | 5 years\nLuis Navarro | Birthday | Tuesday\nPriya Shah | Welcome aboard | Monday", true),
+                ...self::textStyleFields(30),
+            ]),
+            new SchemaWidget('event_schedule', 'Event Schedule', 'Agenda with rooms and live session status.', [
+                new WidgetField('heading', 'string', 'Heading', 'Today at the summit', false),
+                new WidgetField('sessions', 'textarea', 'Sessions (start-end | title | room)', "09:00-10:00 | Opening keynote | Hall A\n10:30-11:15 | Product deep dive | Studio 2\n13:00-14:00 | Partner lunch | Atrium", true),
+                ...self::textStyleFields(28),
+            ], [self::class, 'eventSchedule']),
         ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $settings
+     * @return array<string, mixed>
+     */
+    public static function roomStatus(array $settings, WidgetContext $context): array
+    {
+        if (! self::roomBookingIncluded($context)) {
+            return [...$settings, 'error' => 'Room booking is not included in this plan.', 'timezone' => $context->timezone];
+        }
+
+        $roomId = (int) ($settings['room_id'] ?? 0);
+        $room = $roomId > 0
+            ? MeetingRoom::query()
+                ->where('team_id', $context->team->id)
+                ->with(['location.parent', 'calendarConnection'])
+                ->find($roomId)
+            : null;
+
+        if ($room === null) {
+            return [...$settings, 'error' => 'Choose a room for this widget.', 'timezone' => $context->timezone];
+        }
+
+        return [
+            ...$settings,
+            ...RoomAvailability::screenPayload($room, CarbonImmutable::instance($context->at)),
+            'timezone' => $context->timezone,
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $settings
+     * @return array<string, mixed>
+     */
+    public static function roomBoard(array $settings, WidgetContext $context): array
+    {
+        if (! self::roomBookingIncluded($context)) {
+            return [...$settings, 'rooms' => [], 'error' => 'Room booking is not included in this plan.', 'timezone' => $context->timezone];
+        }
+
+        $locationId = (int) ($settings['location_id'] ?? 0);
+        $limit = max(1, min(20, (int) ($settings['limit'] ?? 8)));
+        $at = CarbonImmutable::instance($context->at);
+
+        $rooms = MeetingRoom::query()
+            ->where('team_id', $context->team->id)
+            ->active()
+            ->when($locationId > 0, fn ($query) => $query->where('location_id', $locationId))
+            ->with(['location.parent', 'calendarConnection'])
+            ->orderBy('name')
+            ->limit($limit)
+            ->get();
+
+        return [
+            ...$settings,
+            'rooms' => $rooms->map(fn (MeetingRoom $room) => RoomAvailability::screenPayload($room, $at))->values()->all(),
+            'timezone' => $context->timezone,
+        ];
+    }
+
+    private static function roomBookingIncluded(WidgetContext $context): bool
+    {
+        return app(TeamQuota::class)->allowsFeature($context->team, PlanFeature::RoomBooking);
+    }
+
+    /**
+     * @param  array<string, mixed>  $settings
+     * @return array<string, mixed>
+     */
+    public static function weatherForecast(array $settings, WidgetContext $context): array
+    {
+        $location = trim((string) ($settings['location'] ?? 'Dubai'));
+        $units = ($settings['units'] ?? 'celsius') === 'fahrenheit' ? 'fahrenheit' : 'celsius';
+        $days = max(2, min(7, (int) ($settings['days'] ?? 5)));
+
+        try {
+            $search = Http::timeout(5)
+                ->acceptJson()
+                ->get('https://geocoding-api.open-meteo.com/v1/search', [
+                    'name' => $location,
+                    'count' => 1,
+                ])
+                ->json();
+
+            $results = is_array($search) && is_array($search['results'] ?? null) ? $search['results'] : [];
+            $place = is_array($results[0] ?? null) ? $results[0] : null;
+
+            if ($place === null) {
+                return [...$settings, 'error' => 'Location not found.', 'timezone' => $context->timezone];
+            }
+
+            $forecast = Http::timeout(5)
+                ->acceptJson()
+                ->get('https://api.open-meteo.com/v1/forecast', [
+                    'latitude' => $place['latitude'] ?? null,
+                    'longitude' => $place['longitude'] ?? null,
+                    'daily' => 'temperature_2m_max,temperature_2m_min,weather_code',
+                    'forecast_days' => $days,
+                    'timezone' => 'auto',
+                    'temperature_unit' => $units,
+                ])
+                ->json();
+
+            $daily = is_array($forecast) && is_array($forecast['daily'] ?? null) ? $forecast['daily'] : [];
+            $dates = is_array($daily['time'] ?? null) ? $daily['time'] : [];
+            $entries = [];
+
+            foreach ($dates as $index => $date) {
+                $entries[] = [
+                    'date' => (string) $date,
+                    'high' => $daily['temperature_2m_max'][$index] ?? null,
+                    'low' => $daily['temperature_2m_min'][$index] ?? null,
+                    'code' => $daily['weather_code'][$index] ?? null,
+                ];
+            }
+
+            return [
+                ...$settings,
+                'place' => (string) ($place['name'] ?? $location),
+                'units' => $units,
+                'days' => $entries,
+                'timezone' => $context->timezone,
+            ];
+        } catch (Throwable) {
+            return [...$settings, 'error' => 'The forecast is unavailable.', 'timezone' => $context->timezone];
+        }
+    }
+
+    /**
+     * @param  array<string, mixed>  $settings
+     * @return array<string, mixed>
+     */
+    public static function safetyCounter(array $settings, WidgetContext $context): array
+    {
+        $since = trim((string) ($settings['since'] ?? ''));
+
+        if ($since === '') {
+            return [...$settings, 'days' => 0, 'timezone' => $context->timezone];
+        }
+
+        try {
+            $start = CarbonImmutable::parse($since, $context->timezone)->startOfDay();
+            $days = max(0, $start->diffInDays(CarbonImmutable::now($context->timezone)->startOfDay()));
+        } catch (Throwable) {
+            return [...$settings, 'days' => 0, 'error' => 'That start date could not be read.', 'timezone' => $context->timezone];
+        }
+
+        return [...$settings, 'days' => (int) $days, 'timezone' => $context->timezone];
+    }
+
+    /**
+     * @param  array<string, mixed>  $settings
+     * @return array<string, mixed>
+     */
+    public static function eventSchedule(array $settings, WidgetContext $context): array
+    {
+        $now = CarbonImmutable::now($context->timezone);
+        $minutes = ($now->hour * 60) + $now->minute;
+        $sessions = [];
+
+        foreach (preg_split('/\r\n|\r|\n/', (string) ($settings['sessions'] ?? '')) ?: [] as $line) {
+            $line = trim($line);
+
+            if ($line === '') {
+                continue;
+            }
+
+            [$when, $title, $room] = array_pad(array_map(trim(...), explode('|', $line)), 3, '');
+            $state = 'scheduled';
+
+            if (preg_match('/^(\d{1,2}):(\d{2})\s*-\s*(\d{1,2}):(\d{2})$/', $when, $matches)) {
+                $start = ((int) $matches[1] * 60) + (int) $matches[2];
+                $end = ((int) $matches[3] * 60) + (int) $matches[4];
+                $state = match (true) {
+                    $minutes >= $start && $minutes < $end => 'live',
+                    $minutes >= $end => 'done',
+                    default => 'upcoming',
+                };
+            }
+
+            $sessions[] = [
+                'when' => $when,
+                'title' => $title !== '' ? $title : $when,
+                'room' => $room,
+                'state' => $state,
+            ];
+        }
+
+        return [...$settings, 'sessions' => $sessions, 'timezone' => $context->timezone];
     }
 
     /**
@@ -235,7 +521,13 @@ final class WidgetCatalog
                 ['value' => 'slide', 'label' => 'Slide in'],
             ]),
             new WidgetField('sound', 'boolean', 'Call sound', $callSound, false),
-            new WidgetField('voice', 'boolean', 'Voice announcements', false, false),
+            // Queue Configuration → Voice announcements is the main switch; a
+            // widget can only opt out. Older designs stored true/false here,
+            // and both follow the main switch.
+            new WidgetField('voice', 'select', 'Voice announcements', 'auto', false, [
+                ['value' => 'auto', 'label' => 'Follow Queue Configuration'],
+                ['value' => 'off', 'label' => 'Off on this widget'],
+            ], 'Called tickets are spoken when voice is on in Queue Configuration.'),
             new WidgetField('font_family', 'select', 'Font', 'Arial', false, [
                 ['value' => 'Arial', 'label' => 'Arial'],
                 ['value' => 'Inter', 'label' => 'Inter'],

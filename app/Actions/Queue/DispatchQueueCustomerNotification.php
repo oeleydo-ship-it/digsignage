@@ -8,21 +8,34 @@ use App\Jobs\SendQueueCustomerNotification;
 use App\Models\QueueAppointment;
 use App\Models\QueueNotificationDelivery;
 use App\Models\QueueNotificationRule;
+use App\Models\QueuePushSubscription;
 use App\Models\QueueTicket;
+use App\Support\QueueNotificationChannels;
+use App\Support\QueueNotificationTemplates;
 
 class DispatchQueueCustomerNotification
 {
+    public function __construct(
+        protected QueueNotificationTemplates $templates,
+        protected QueueNotificationChannels $channels,
+    ) {}
+
     public function forTicket(QueueTicket $ticket, QueueNotificationEvent $event, string $occurrence = 'once'): void
     {
-        $ticket->loadMissing(['service:id,name', 'counter:id,name']);
-        [$subject, $body] = $this->ticketCopy($ticket, $event);
-        $data = [
-            'ticket_id' => $ticket->id,
-            'ticket_number' => $ticket->number,
+        $ticket->loadMissing(['service:id,name', 'counter:id,name', 'location:id,name', 'team:id,name']);
+        $values = [
+            'ticket' => $ticket->number,
+            'name' => $ticket->customer_name,
             'service' => $ticket->service->name,
-            'counter' => $ticket->counter?->name,
-            'queue_position' => $ticket->queue_position,
+            'counter' => $ticket->counter_id === null ? __('the counter') : $ticket->counter->name,
+            'position' => $ticket->queue_position,
+            'location' => $ticket->location?->name,
+            'link' => filled($ticket->public_token) ? route('queue.virtual.ticket', $ticket->public_token) : null,
+            'team' => $ticket->team->name,
         ];
+        ['subject' => $subject, 'body' => $body] = $this->templates->render($ticket->team_id, $event, $values);
+        $hasPush = filled($ticket->public_token)
+            && QueuePushSubscription::query()->where('queue_ticket_id', $ticket->id)->exists();
 
         $this->dispatchRules(
             teamId: $ticket->team_id,
@@ -30,12 +43,18 @@ class DispatchQueueCustomerNotification
             occurrence: 'ticket:'.$ticket->id.':'.$occurrence,
             subject: $subject,
             body: $body,
-            data: $data,
+            data: [
+                'ticket_id' => $ticket->id,
+                'ticket_number' => $ticket->number,
+                'service' => $ticket->service->name,
+                'counter' => $ticket->counter?->name,
+                'queue_position' => $ticket->queue_position,
+            ],
             destinations: [
                 QueueNotificationChannel::Email->value => $ticket->customer_email,
                 QueueNotificationChannel::Sms->value => $ticket->customer_phone,
                 QueueNotificationChannel::WhatsApp->value => $ticket->customer_phone,
-                QueueNotificationChannel::Push->value => $ticket->public_token,
+                QueueNotificationChannel::Push->value => $hasPush ? $ticket->public_token : null,
             ],
             ticketId: $ticket->id,
         );
@@ -44,10 +63,12 @@ class DispatchQueueCustomerNotification
     public function forAppointment(QueueAppointment $appointment): void
     {
         $appointment->loadMissing(['service:id,name', 'location:id,name']);
-        $subject = 'Appointment reminder';
-        $body = __('Your :service appointment is at :time.', [
+        ['subject' => $subject, 'body' => $body] = $this->templates->render($appointment->team_id, QueueNotificationEvent::AppointmentApproaching, [
+            'name' => $appointment->customer_name,
             'service' => $appointment->service->name,
+            'location' => $appointment->location?->name,
             'time' => $appointment->scheduled_at->format('M j, Y g:i A'),
+            'reference' => $appointment->reference,
         ]);
 
         $this->dispatchRules(
@@ -67,7 +88,8 @@ class DispatchQueueCustomerNotification
                 QueueNotificationChannel::Email->value => $appointment->customer_email,
                 QueueNotificationChannel::Sms->value => $appointment->customer_phone,
                 QueueNotificationChannel::WhatsApp->value => $appointment->customer_phone,
-                QueueNotificationChannel::Push->value => $appointment->reference,
+                // Appointments have no page for a browser to subscribe on.
+                QueueNotificationChannel::Push->value => null,
             ],
             appointmentId: $appointment->id,
         );
@@ -87,6 +109,12 @@ class DispatchQueueCustomerNotification
 
         foreach ($rules as $rule) {
             $destination = $destinations[$rule->channel->value] ?? null;
+            $skip = match (true) {
+                ! $this->channels->canSend($teamId, $rule->channel) => __(':channel is not set up.', ['channel' => $rule->channel->label()]),
+                blank($destination) && $rule->channel === QueueNotificationChannel::Push => __('The customer has not turned on notifications.'),
+                blank($destination) => __('Customer destination is unavailable.'),
+                default => null,
+            };
             $dedupeKey = hash('sha256', $teamId.'|'.$event->value.'|'.$rule->channel->value.'|'.$occurrence);
             $delivery = QueueNotificationDelivery::query()->firstOrCreate(
                 ['dedupe_key' => $dedupeKey],
@@ -98,9 +126,9 @@ class DispatchQueueCustomerNotification
                     'event' => $event,
                     'channel' => $rule->channel,
                     'destination' => $destination,
-                    'status' => filled($destination) ? 'pending' : 'skipped',
+                    'status' => $skip === null ? 'pending' : 'skipped',
                     'payload' => ['subject' => $subject, 'body' => $body, 'data' => $data],
-                    'error' => filled($destination) ? null : 'Customer destination is unavailable.',
+                    'error' => $skip,
                 ],
             );
 
@@ -108,23 +136,5 @@ class DispatchQueueCustomerNotification
                 SendQueueCustomerNotification::dispatch($delivery->id)->afterCommit();
             }
         }
-    }
-
-    /** @return array{string, string} */
-    protected function ticketCopy(QueueTicket $ticket, QueueNotificationEvent $event): array
-    {
-        $subject = 'Queue update for '.$ticket->number;
-        $counterName = $ticket->counter_id === null ? __('the counter') : $ticket->counter->name;
-        $body = match ($event) {
-            QueueNotificationEvent::TicketCreated => __('Ticket :ticket was created for :service.', ['ticket' => $ticket->number, 'service' => $ticket->service->name]),
-            QueueNotificationEvent::FiveAhead => __('There are 5 customers ahead of ticket :ticket.', ['ticket' => $ticket->number]),
-            QueueNotificationEvent::ThreeAhead => __('There are 3 customers ahead of ticket :ticket.', ['ticket' => $ticket->number]),
-            QueueNotificationEvent::CustomerNext => __('Ticket :ticket is next.', ['ticket' => $ticket->number]),
-            QueueNotificationEvent::TicketCalled => __('Ticket :ticket has been called. Please proceed to :counter.', ['ticket' => $ticket->number, 'counter' => $counterName]),
-            QueueNotificationEvent::TicketTransferred => __('Ticket :ticket was transferred to :service.', ['ticket' => $ticket->number, 'service' => $ticket->service->name]),
-            QueueNotificationEvent::AppointmentApproaching => '',
-        };
-
-        return [$subject, $body];
     }
 }

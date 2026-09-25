@@ -5,6 +5,7 @@ use App\Http\Controllers\Approval\ContentApprovalController;
 use App\Http\Controllers\Audit\AuditLogController;
 use App\Http\Controllers\Billing\BillingController;
 use App\Http\Controllers\Billing\StripeWebhookController;
+use App\Http\Controllers\Booking\PublicRoomBookingController;
 use App\Http\Controllers\Channel\ChannelController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Design\DesignController;
@@ -45,6 +46,13 @@ Route::post('stripe/webhook', StripeWebhookController::class)->name('stripe.webh
 Route::get('player/setup', PlayerSetupController::class)->name('player.setup');
 Route::get('player', PlayerPlayController::class)->name('player.play');
 
+Route::get('book/{meetingRoom:booking_token}', [PublicRoomBookingController::class, 'show'])
+    ->middleware('plan.feature:room_booking')
+    ->name('rooms.public.show');
+Route::post('book/{meetingRoom:booking_token}', [PublicRoomBookingController::class, 'store'])
+    ->middleware(['throttle:room-booking-form', 'plan.feature:room_booking'])
+    ->name('rooms.public.store');
+
 Route::middleware('plan.feature:queue_management')->group(function () {
     Route::get('kiosk/{queueKiosk:token}', [QueueKioskServeController::class, 'show'])
         ->name('queue.kiosk.serve');
@@ -68,6 +76,12 @@ Route::middleware('plan.feature:queue_management')->group(function () {
         ->name('queue.virtual.store');
     Route::get('queue-ticket/{queueTicket:public_token}', [QueueVirtualController::class, 'ticket'])
         ->name('queue.virtual.ticket');
+    Route::post('queue-ticket/{queueTicket:public_token}/push', [QueueVirtualController::class, 'subscribePush'])
+        ->middleware('throttle:queue-kiosk-issue')
+        ->name('queue.virtual.push.subscribe');
+    Route::delete('queue-ticket/{queueTicket:public_token}/push', [QueueVirtualController::class, 'unsubscribePush'])
+        ->middleware('throttle:queue-kiosk-issue')
+        ->name('queue.virtual.push.unsubscribe');
     Route::post('queue-ticket/{queueTicket:public_token}/cancel', [QueueVirtualController::class, 'cancel'])
         ->middleware('throttle:queue-kiosk-issue')
         ->name('queue.virtual.cancel');
@@ -213,6 +227,7 @@ Route::prefix('{current_team}')
         Route::delete('schedules/{schedule}', [ScheduleController::class, 'destroy'])->name('schedules.destroy');
 
         require __DIR__.'/queue.php';
+        require __DIR__.'/bookings.php';
     });
 
 Route::middleware(['auth'])->group(function () {

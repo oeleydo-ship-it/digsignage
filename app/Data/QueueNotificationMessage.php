@@ -10,5 +10,6 @@ final readonly class QueueNotificationMessage
         public string $subject,
         public string $body,
         public array $data = [],
+        public ?int $teamId = null,
     ) {}
 }

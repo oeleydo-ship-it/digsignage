@@ -1,8 +1,22 @@
 import { Head, router } from '@inertiajs/react';
-import { CheckCircle2, Clock3, MapPin, Radio, Users } from 'lucide-react';
+import {
+    Bell,
+    BellOff,
+    CheckCircle2,
+    Clock3,
+    MapPin,
+    Radio,
+    Users,
+} from 'lucide-react';
 import { useEffect, useState } from 'react';
 import type { ReverbConfig } from '@/lib/player-echo';
 import { subscribeQueueUpdates } from '@/lib/queue-echo';
+import {
+    currentPushState,
+    type PushState,
+    subscribeToTicket,
+    unsubscribeFromTicket,
+} from '@/lib/queue-push';
 
 type Ticket = {
     token: string;
@@ -21,9 +35,13 @@ type Ticket = {
     team_name: string;
 };
 
-type Props = { ticket: Ticket; reverb: ReverbConfig };
+type Props = {
+    ticket: Ticket;
+    reverb: ReverbConfig;
+    push?: { enabled: boolean; public_key: string | null };
+};
 
-export default function VirtualQueueTicket({ ticket, reverb }: Props) {
+export default function VirtualQueueTicket({ ticket, reverb, push }: Props) {
     const [cancelling, setCancelling] = useState(false);
 
     useEffect(() => {
@@ -165,6 +183,13 @@ export default function VirtualQueueTicket({ ticket, reverb }: Props) {
                         ) : null}
                     </section>
 
+                    {push?.enabled && push.public_key && active ? (
+                        <NotifyMe
+                            token={ticket.token}
+                            publicKey={push.public_key}
+                        />
+                    ) : null}
+
                     <p className="mt-5 text-center text-xs text-slate-500">
                         Updates arrive automatically. You can keep this page
                         open.
@@ -184,6 +209,84 @@ export default function VirtualQueueTicket({ ticket, reverb }: Props) {
                 </div>
             </main>
         </>
+    );
+}
+
+/**
+ * "Notify me": browser push for this ticket, so the customer can close the
+ * page and still hear when they are next or called.
+ */
+function NotifyMe({ token, publicKey }: { token: string; publicKey: string }) {
+    const [state, setState] = useState<PushState>('working');
+    const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        void currentPushState().then(setState);
+    }, []);
+
+    if (state === 'unsupported') {
+        return null;
+    }
+
+    const toggle = async () => {
+        const previous = state;
+        setState('working');
+        setError(null);
+
+        try {
+            setState(
+                previous === 'subscribed'
+                    ? await unsubscribeFromTicket(token)
+                    : await subscribeToTicket(token, publicKey),
+            );
+        } catch {
+            setState(previous);
+            setError('Notifications could not be turned on. Please try again.');
+        }
+    };
+
+    return (
+        <section
+            className="mt-4 rounded-3xl border border-white/10 bg-white/5 p-5"
+            data-test="notify-me"
+        >
+            <div className="flex items-center justify-between gap-3">
+                <div>
+                    <p className="font-semibold">
+                        {state === 'subscribed'
+                            ? 'Notifications are on'
+                            : 'Get notified on this phone'}
+                    </p>
+                    <p className="mt-1 text-xs text-slate-400">
+                        {state === 'denied'
+                            ? 'Notifications are blocked. Allow them for this site in your browser settings.'
+                            : 'We will alert you when you are almost up and when you are called, even with this page closed.'}
+                    </p>
+                </div>
+                {state !== 'denied' ? (
+                    <button
+                        type="button"
+                        onClick={() => void toggle()}
+                        disabled={state === 'working'}
+                        className={`inline-flex min-h-11 shrink-0 items-center gap-2 rounded-2xl px-4 text-sm font-semibold disabled:opacity-50 ${
+                            state === 'subscribed'
+                                ? 'border border-white/15 text-slate-200 hover:bg-white/10'
+                                : 'bg-blue-500 text-white hover:bg-blue-400'
+                        }`}
+                    >
+                        {state === 'subscribed' ? (
+                            <BellOff className="size-4" />
+                        ) : (
+                            <Bell className="size-4" />
+                        )}
+                        {state === 'subscribed' ? 'Turn off' : 'Notify me'}
+                    </button>
+                ) : null}
+            </div>
+            {error ? (
+                <p className="mt-2 text-xs text-red-300">{error}</p>
+            ) : null}
+        </section>
     );
 }
 

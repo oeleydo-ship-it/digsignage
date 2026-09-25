@@ -47,3 +47,8 @@ Schedule::call(function () {
 Schedule::call(function () {
     app(EvaluateQueueAlerts::class)->handle();
 })->everyMinute()->description('Evaluate automated queue alerts');
+
+Schedule::command('bookings:sync-microsoft')
+    ->everyFiveMinutes()
+    ->withoutOverlapping()
+    ->description('Pull Microsoft 365 room calendars into room bookings');

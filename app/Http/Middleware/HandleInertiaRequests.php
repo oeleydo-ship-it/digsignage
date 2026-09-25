@@ -3,10 +3,13 @@
 namespace App\Http\Middleware;
 
 use App\Enums\PlanFeature;
+use App\Enums\TeamRole;
 use App\Models\Announcement;
 use App\Models\AuditLog;
 use App\Models\InAppNotification;
 use App\Support\Impersonation;
+use App\Support\OpaqueProp;
+use App\Support\PlatformSettings;
 use App\Support\TeamQuota;
 use App\Widgets\WidgetRegistry;
 use Illuminate\Http\Request;
@@ -46,9 +49,33 @@ class HandleInertiaRequests extends Middleware
         $user = $request->user();
         $impersonator = $user ? Impersonation::actor($request) : null;
 
+        // Several permission props need the same membership role; look it up
+        // once per request instead of once per prop.
+        $resolvedRole = null;
+        $roleResolved = false;
+        $teamRole = function () use ($user, &$resolvedRole, &$roleResolved): ?TeamRole {
+            if (! $roleResolved) {
+                $resolvedRole = $user?->currentTeam ? $user->teamRole($user->currentTeam) : null;
+                $roleResolved = true;
+            }
+
+            return $resolvedRole;
+        };
+
+        $settings = app(PlatformSettings::class);
+
         return [
             ...parent::share($request),
             'name' => config('app.name'),
+            'branding' => fn () => [
+                'logo_url' => $settings->logoUrl(),
+                'favicon_url' => $settings->faviconUrl(),
+                'logo_tone' => $settings->logoTone(),
+                'show_name' => $settings->showName(),
+                'support_email' => $settings->get('general.support_email'),
+                'terms_url' => $settings->get('general.terms_url'),
+                'privacy_url' => $settings->get('general.privacy_url'),
+            ],
             'auth' => [
                 'user' => $user,
             ],
@@ -87,10 +114,14 @@ class HandleInertiaRequests extends Middleware
                 : null,
             'queuePermissions' => fn () => $user?->currentTeam
                 && app(TeamQuota::class)->allowsFeature($user->currentTeam, PlanFeature::QueueManagement)
-                ? $user->toQueuePermissions($user->currentTeam)
+                ? $user->toQueuePermissions($user->currentTeam, $teamRole())
+                : null,
+            'bookingPermissions' => fn () => $user?->currentTeam
+                && app(TeamQuota::class)->allowsFeature($user->currentTeam, PlanFeature::RoomBooking)
+                ? $user->toBookingPermissions($user->currentTeam, $teamRole())
                 : null,
             'billingPermissions' => fn () => $user?->currentTeam
-                ? $user->toBillingPermissions($user->currentTeam)
+                ? $user->toBillingPermissions($user->currentTeam, $teamRole())
                 : null,
             'canViewAuditLogs' => fn () => $user?->currentTeam
                 ? $user->can('viewAny', AuditLog::class)
@@ -131,7 +162,11 @@ class HandleInertiaRequests extends Middleware
                     ->values()
                     ->all();
             },
-            'widgets' => fn () => app(WidgetRegistry::class)->toArrayForTeam($user?->currentTeam),
+            'widgets' => fn () => OpaqueProp::from(app(WidgetRegistry::class)->toArrayForTeam(
+                $user?->currentTeam,
+                // Room pickers are only needed where widget settings are edited.
+                withRoomOptions: $request->routeIs('designs.edit', 'templates.edit', 'playlists.edit'),
+            )),
             'announcements' => fn () => $user
                 ? Cache::remember('platform:announcements:published', 300, fn () => Announcement::query()
                     ->published()

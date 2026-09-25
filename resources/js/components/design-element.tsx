@@ -1,5 +1,6 @@
 import { type CSSProperties, type ReactNode } from 'react';
 import WidgetSurface from '@/components/widget-surface';
+import { designIcon } from '@/lib/design-icons';
 import { canonicalWidgetKey, isWidgetType } from '@/lib/widget-keys';
 import { clampWidgetFontSize } from '@/lib/widget-style';
 import type { DesignDocumentElement, WidgetPayload } from '@/types';
@@ -18,11 +19,14 @@ export function DesignElementContent({
     scale = 1,
     timezone = 'UTC',
     resolveMedia = (_mediaId, fallback) => fallback,
+    staticPreview = false,
 }: {
     element: DesignDocumentElement;
     scale?: number;
     timezone?: string;
     resolveMedia?: MediaResolver;
+    /** Render posters instead of live iframes and video, for galleries. */
+    staticPreview?: boolean;
 }) {
     const props = element.props;
     const mediaId = Number(props.media_id ?? 0) || null;
@@ -46,13 +50,48 @@ export function DesignElementContent({
 
         return (
             <div className="h-full w-full overflow-hidden">
-                <WidgetSurface widget={liveWidget} timezone={timezone} />
+                <WidgetSurface
+                    widget={liveWidget}
+                    timezone={timezone}
+                    staticPreview={staticPreview}
+                />
+            </div>
+        );
+    }
+
+    if (element.type === 'icon') {
+        const { Icon, label } = designIcon(props.icon);
+        const badge = String(props.background ?? 'transparent');
+        const shape = props.badgeShape === 'square' ? '22%' : '50%';
+
+        return (
+            <div
+                className="flex h-full w-full items-center justify-center"
+                style={{
+                    background: badge,
+                    borderRadius: badge === 'transparent' ? 0 : shape,
+                    padding: badge === 'transparent' ? 0 : '16%',
+                }}
+            >
+                <Icon
+                    aria-label={label}
+                    className="h-full w-full"
+                    color={String(props.color ?? '#ffffff')}
+                    strokeWidth={Math.max(
+                        0.5,
+                        Math.min(4, Number(props.strokeWidth ?? 2)),
+                    )}
+                    absoluteStrokeWidth={false}
+                />
             </div>
         );
     }
 
     if ((element.type === 'image' || element.type === 'logo') && source) {
-        const zoom = Math.max(1, Math.min(4, Number(props.imageZoom ?? 1) || 1));
+        const zoom = Math.max(
+            1,
+            Math.min(4, Number(props.imageZoom ?? 1) || 1),
+        );
         const x = Math.max(0, Math.min(100, Number(props.imageX ?? 50)));
         const y = Math.max(0, Math.min(100, Number(props.imageY ?? 50)));
 
@@ -64,8 +103,14 @@ export function DesignElementContent({
                     draggable={false}
                     className="pointer-events-none absolute max-w-none select-none"
                     onError={(event) => {
-                        if (source.startsWith('/images/catalog/') && !event.currentTarget.src.endsWith('/images/catalog-fallback.svg')) {
-                            event.currentTarget.src = '/images/catalog-fallback.svg';
+                        if (
+                            source.startsWith('/images/catalog/') &&
+                            !event.currentTarget.src.endsWith(
+                                '/images/catalog-fallback.svg',
+                            )
+                        ) {
+                            event.currentTarget.src =
+                                '/images/catalog-fallback.svg';
                         }
                     }}
                     style={{
@@ -85,6 +130,14 @@ export function DesignElementContent({
         (element.type === 'video' && (source || props.url)) ||
         (element.type === 'live_stream' && props.url)
     ) {
+        if (staticPreview) {
+            return (
+                <Placeholder>
+                    {element.type === 'live_stream' ? 'Live stream' : 'Video'}
+                </Placeholder>
+            );
+        }
+
         return (
             <video
                 src={source ?? String(props.url)}

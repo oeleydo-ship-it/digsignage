@@ -13,6 +13,7 @@ enum PlanFeature: string
     case ProofOfPlay = 'proof_of_play';
     case Designer = 'designer';
     case Schedules = 'schedules';
+    case RoomBooking = 'room_booking';
 
     public function label(): string
     {
@@ -26,6 +27,7 @@ enum PlanFeature: string
             self::ProofOfPlay => 'Proof of play',
             self::Designer => 'Designer',
             self::Schedules => 'Schedules',
+            self::RoomBooking => 'Room booking',
         };
     }
 

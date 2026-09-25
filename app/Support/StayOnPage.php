@@ -26,7 +26,9 @@ final class StayOnPage
             return url()->to($fallback);
         }
 
-        return $request->fullUrl();
+        // Redirecting a PUT/POST/DELETE to its own URL makes the browser GET an
+        // action-only route (405), so only GET requests may stay put.
+        return $request->isMethod('GET') ? $request->fullUrl() : url('/');
     }
 
     /**

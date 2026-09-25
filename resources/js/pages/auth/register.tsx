@@ -18,7 +18,12 @@ type Props = {
     setupConfigured?: boolean;
 };
 
-export default function Register({ passwordRules, teamInvitation, initialSetup = false, setupConfigured = false }: Props) {
+export default function Register({
+    passwordRules,
+    teamInvitation,
+    initialSetup = false,
+    setupConfigured = false,
+}: Props) {
     return (
         <>
             <Head title={initialSetup ? 'Set up administrator' : 'Register'} />
@@ -31,30 +36,46 @@ export default function Register({ passwordRules, teamInvitation, initialSetup =
                 {({ processing, errors }) => (
                     <>
                         {initialSetup && (
-                            <div className="rounded-lg border border-border bg-muted/40 p-4 text-sm">
-                                <p className="font-semibold">Set up the platform administrator</p>
-                                <p className="mt-1 text-muted-foreground">
-                                    This is a new installation. Create the first administrator before the site opens to other users.
-                                    Enter the setup key configured on the server.
+                            <div className="border-border bg-muted/40 rounded-lg border p-4 text-sm">
+                                <p className="font-semibold">
+                                    Set up the platform administrator
+                                </p>
+                                <p className="text-muted-foreground mt-1">
+                                    This is a new installation. Create the first
+                                    administrator before the site opens to other
+                                    users. Enter the setup key configured on the
+                                    server.
                                 </p>
                                 {!setupConfigured && (
-                                    <p className="mt-2 text-destructive">
-                                        The server owner must set INITIAL_ADMIN_SETUP_KEY before this form can be submitted.
+                                    <p className="text-destructive mt-2">
+                                        The server owner must set
+                                        INITIAL_ADMIN_SETUP_KEY before this form
+                                        can be submitted.
                                     </p>
                                 )}
                             </div>
                         )}
                         {teamInvitation && (
-                            <TeamInvitationAlert
-                                invitation={teamInvitation}
-                                action="Register"
-                            />
+                            <>
+                                <TeamInvitationAlert
+                                    invitation={teamInvitation}
+                                    action="Register"
+                                />
+                                {/* Lets invited people register while public sign-ups are closed. */}
+                                <input
+                                    type="hidden"
+                                    name="invitation"
+                                    value={teamInvitation.code}
+                                />
+                            </>
                         )}
 
                         <div className="grid gap-6">
                             {initialSetup && (
                                 <div className="grid gap-2">
-                                    <Label htmlFor="setup_key">Server setup key</Label>
+                                    <Label htmlFor="setup_key">
+                                        Server setup key
+                                    </Label>
                                     <Input
                                         id="setup_key"
                                         type="password"
@@ -137,29 +158,33 @@ export default function Register({ passwordRules, teamInvitation, initialSetup =
                                 data-test="register-user-button"
                             >
                                 {processing && <Spinner />}
-                                {initialSetup ? 'Create administrator' : 'Create account'}
+                                {initialSetup
+                                    ? 'Create administrator'
+                                    : 'Create account'}
                             </Button>
                         </div>
 
-                        {!initialSetup && <div className="text-muted-foreground text-center text-sm">
-                            Already have an account?{' '}
-                            <TextLink
-                                href={
-                                    teamInvitation
-                                        ? login.url({
-                                              query: {
-                                                  invitation:
-                                                      teamInvitation.code,
-                                              },
-                                          })
-                                        : login()
-                                }
-                                data-test="team-invitation-login-link"
-                                tabIndex={6}
-                            >
-                                Log in
-                            </TextLink>
-                        </div>}
+                        {!initialSetup && (
+                            <div className="text-muted-foreground text-center text-sm">
+                                Already have an account?{' '}
+                                <TextLink
+                                    href={
+                                        teamInvitation
+                                            ? login.url({
+                                                  query: {
+                                                      invitation:
+                                                          teamInvitation.code,
+                                                  },
+                                              })
+                                            : login()
+                                    }
+                                    data-test="team-invitation-login-link"
+                                    tabIndex={6}
+                                >
+                                    Log in
+                                </TextLink>
+                            </div>
+                        )}
                     </>
                 )}
             </Form>

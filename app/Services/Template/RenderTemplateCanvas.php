@@ -87,6 +87,24 @@ class RenderTemplateCanvas
             return;
         }
 
+        if ($type === 'icon') {
+            // GD cannot draw the vector icon set; a tinted badge keeps the
+            // layout legible in JPEG thumbnails.
+            $background = is_string($props['background'] ?? null) ? $props['background'] : 'transparent';
+            $color = is_string($props['color'] ?? null) ? $props['color'] : '#ffffff';
+            $size = max(4, min($width, $height));
+            $cx = $x + (int) ($width / 2);
+            $cy = $y + (int) ($height / 2);
+
+            if ($background !== 'transparent') {
+                imagefilledellipse($canvas, $cx, $cy, $size, $size, $this->color($canvas, $background));
+            }
+
+            imagefilledellipse($canvas, $cx, $cy, max(2, (int) ($size * 0.42)), max(2, (int) ($size * 0.42)), $this->color($canvas, $color));
+
+            return;
+        }
+
         if ($type === 'text') {
             $this->drawTextBlock(
                 $canvas,
@@ -142,6 +160,9 @@ class RenderTemplateCanvas
             'clock', 'date', 'weather', 'rss', 'news', 'qr_code', 'web_page', 'youtube',
             'calendar', 'countdown', 'menu_board', 'alert_banner', 'table', 'booking',
             'room_info', 'social_wall', 'world_clock', 'charts', 'json_api',
+            'analog_clock', 'weather_forecast', 'metric_tiles', 'progress_goal',
+            'gauge', 'quote', 'safety_counter', 'image_gallery', 'directory',
+            'celebrations', 'event_schedule', 'room_status', 'room_board',
         ], true);
     }
 
@@ -294,6 +315,99 @@ class RenderTemplateCanvas
                 'Sample headline',
                 $color,
                 max(12, (int) round($fontSize * 1.1)),
+            ),
+            'analog_clock' => $this->drawAnalogClock($canvas, $x, $y, $width, $height, $props),
+            'gauge' => $this->drawGauge($canvas, $x, $y, $width, $height, $props),
+            'safety_counter' => $this->drawHeroWidget(
+                $canvas,
+                $x,
+                $y,
+                $width,
+                $height,
+                (string) ($props['label'] ?? 'Days without an incident'),
+                '128',
+                $color,
+                max(16, (int) round($fontSize * 1.2)),
+            ),
+            'quote' => $this->drawListWidget(
+                $canvas,
+                $x,
+                $y,
+                $width,
+                $height,
+                '',
+                $this->parseFirstCells($props['quotes'] ?? '', 2),
+                $color,
+                $fontSize,
+            ),
+            'weather_forecast' => $this->drawListWidget(
+                $canvas,
+                $x,
+                $y,
+                $width,
+                $height,
+                (string) ($props['location'] ?? 'Forecast'),
+                ['Mon  32/24', 'Tue  33/25', 'Wed  31/24', 'Thu  30/23'],
+                $color,
+                $fontSize,
+            ),
+            'metric_tiles' => $this->drawListWidget(
+                $canvas,
+                $x,
+                $y,
+                $width,
+                $height,
+                (string) ($props['heading'] ?? 'Metrics'),
+                $this->parseDelimitedLines($props['metrics'] ?? ''),
+                $color,
+                $fontSize,
+            ),
+            'progress_goal' => $this->drawProgressGoals($canvas, $x, $y, $width, $height, $props, $scale),
+            'directory' => $this->drawListWidget(
+                $canvas,
+                $x,
+                $y,
+                $width,
+                $height,
+                (string) ($props['heading'] ?? 'Directory'),
+                $this->parseDelimitedLines($props['entries'] ?? ''),
+                $color,
+                $fontSize,
+            ),
+            'celebrations' => $this->drawListWidget(
+                $canvas,
+                $x,
+                $y,
+                $width,
+                $height,
+                (string) ($props['heading'] ?? 'Celebrating'),
+                $this->parseDelimitedLines($props['people'] ?? ''),
+                $color,
+                $fontSize,
+            ),
+            'event_schedule' => $this->drawListWidget(
+                $canvas,
+                $x,
+                $y,
+                $width,
+                $height,
+                (string) ($props['heading'] ?? 'Schedule'),
+                $this->parseDelimitedLines($props['sessions'] ?? ''),
+                $color,
+                $fontSize,
+            ),
+            'image_gallery' => $this->drawGalleryPlaceholder($canvas, $x, $y, $width, $height, $props),
+            'room_status' => $this->drawRoomStatus($canvas, $x, $y, $width, $height, $fontSize),
+            'room_board' => $this->drawListWidget(
+                $canvas,
+                $x,
+                $y,
+                $width,
+                $height,
+                (string) ($props['heading'] ?? 'Meeting rooms'),
+                ['Boardroom  Available', 'Studio  In use', 'Huddle 2  Available'],
+                $color,
+                $fontSize,
             ),
             default => $this->filledRect($canvas, $x, $y, $width, $height, '#1e293b', 1),
         };
@@ -466,6 +580,173 @@ class RenderTemplateCanvas
             $this->drawTextBlock($canvas, $x + $padding, $cursorY, $width - ($padding * 2), $lineHeight, $line, $fontSize, $color, 'left', '400');
             $cursorY += $lineHeight;
         }
+    }
+
+    /**
+     * @param  array<string, mixed>  $props
+     * @param  \GdImage  $canvas
+     */
+    protected function drawAnalogClock(mixed $canvas, int $x, int $y, int $width, int $height, array $props): void
+    {
+        $face = (string) ($props['face'] ?? 'dark');
+        $dial = $face === 'light' ? '#f8fafc' : '#0f172a';
+        $ink = $face === 'light' ? '#0f172a' : '#e2e8f0';
+        $accent = is_string($props['color'] ?? null) ? $props['color'] : '#38bdf8';
+        $radius = (int) max(4, (min($width, $height) / 2) - 2);
+        $cx = $x + (int) ($width / 2);
+        $cy = $y + (int) ($height / 2);
+
+        imagefilledellipse($canvas, $cx, $cy, $radius * 2, $radius * 2, $this->color($canvas, $dial));
+        imageellipse($canvas, $cx, $cy, $radius * 2, $radius * 2, $this->color($canvas, $ink));
+
+        $now = now();
+        $hourAngle = deg2rad((((int) $now->format('g') % 12) + ((int) $now->format('i') / 60)) * 30);
+        $minuteAngle = deg2rad(((int) $now->format('i')) * 6);
+
+        imagesetthickness($canvas, max(1, (int) round($radius / 12)));
+        imageline(
+            $canvas,
+            $cx,
+            $cy,
+            $cx + (int) round(sin($hourAngle) * $radius * 0.5),
+            $cy - (int) round(cos($hourAngle) * $radius * 0.5),
+            $this->color($canvas, $ink),
+        );
+        imageline(
+            $canvas,
+            $cx,
+            $cy,
+            $cx + (int) round(sin($minuteAngle) * $radius * 0.78),
+            $cy - (int) round(cos($minuteAngle) * $radius * 0.78),
+            $this->color($canvas, $accent),
+        );
+        imagesetthickness($canvas, 1);
+    }
+
+    /**
+     * @param  array<string, mixed>  $props
+     * @param  \GdImage  $canvas
+     */
+    protected function drawGauge(mixed $canvas, int $x, int $y, int $width, int $height, array $props): void
+    {
+        $accent = is_string($props['color'] ?? null) ? $props['color'] : '#22d3ee';
+        $min = (float) ($props['min'] ?? 0);
+        $max = (float) ($props['max'] ?? 100);
+        $value = (float) ($props['value'] ?? 0);
+        $span = $max - $min;
+        $ratio = $span != 0.0 ? max(0.0, min(1.0, ($value - $min) / $span)) : 0.0;
+        $diameter = (int) max(8, min($width, $height) - 4);
+        $cx = $x + (int) ($width / 2);
+        $cy = $y + (int) ($height / 2);
+
+        imagesetthickness($canvas, max(2, (int) round($diameter / 10)));
+        imagearc($canvas, $cx, $cy, $diameter, $diameter, 150, 30, $this->color($canvas, '#334155'));
+
+        if ($ratio > 0) {
+            imagearc($canvas, $cx, $cy, $diameter, $diameter, 150, (int) round(150 + (240 * $ratio)), $this->color($canvas, $accent));
+        }
+
+        imagesetthickness($canvas, 1);
+
+        $label = rtrim((string) round($value)).(string) ($props['suffix'] ?? '');
+        $this->drawTextBlock($canvas, $x, $cy - 6, $width, 20, $label, max(9, (int) round($diameter / 5)), $accent, 'center', '700', true);
+    }
+
+    /**
+     * @param  array<string, mixed>  $props
+     * @param  \GdImage  $canvas
+     */
+    protected function drawProgressGoals(mixed $canvas, int $x, int $y, int $width, int $height, array $props, float $scale): void
+    {
+        $color = is_string($props['color'] ?? null) ? $props['color'] : '#ffffff';
+        $fontSize = max(8, (int) round(((int) ($props['fontSize'] ?? 28)) * $scale));
+        $goals = $this->parseLines($props['goals'] ?? '');
+        $cursorY = $y + 6;
+
+        $this->drawTextBlock($canvas, $x + 6, $cursorY, $width - 12, $fontSize, (string) ($props['heading'] ?? 'Goals'), max(8, (int) ($fontSize * 0.7)), $color, 'left', '600', true);
+        $cursorY += max(12, (int) ($fontSize * 1.1));
+
+        $rowHeight = max(14, (int) ($fontSize * 1.9));
+
+        foreach ($goals as $goal) {
+            if ($cursorY + $rowHeight > $y + $height) {
+                break;
+            }
+
+            [$label, $value, $target] = array_pad(array_map(trim(...), explode('|', $goal)), 3, '');
+            $current = (float) preg_replace('/[^0-9.\-]/', '', $value);
+            $limit = (float) preg_replace('/[^0-9.\-]/', '', $target);
+            $ratio = $limit > 0 ? max(0.0, min(1.0, $current / $limit)) : 0.0;
+
+            $this->drawTextBlock($canvas, $x + 6, $cursorY, $width - 12, $fontSize, $label.'  '.$value.' / '.$target, $fontSize, $color, 'left', '400', true);
+            $barY = $cursorY + $fontSize + 2;
+            $barHeight = max(3, (int) ($fontSize * 0.35));
+            $this->filledRect($canvas, $x + 6, $barY, $width - 12, $barHeight, '#334155', 1);
+
+            if ($ratio > 0) {
+                $this->filledRect($canvas, $x + 6, $barY, (int) round(($width - 12) * $ratio), $barHeight, '#38bdf8', 1);
+            }
+
+            $cursorY += $rowHeight;
+        }
+    }
+
+    /**
+     * @param  array<string, mixed>  $props
+     * @param  \GdImage  $canvas
+     */
+    protected function drawGalleryPlaceholder(mixed $canvas, int $x, int $y, int $width, int $height, array $props): void
+    {
+        $first = $this->parseLines($props['images'] ?? '')[0] ?? '';
+
+        if ($first !== '' && $this->drawImage($canvas, $first, $x, $y, $width, $height)) {
+            return;
+        }
+
+        $this->filledRect($canvas, $x, $y, $width, $height, '#1f2937', 1);
+        $this->drawTextBlock($canvas, $x + 6, $y + (int) ($height / 2) - 6, $width - 12, 20, 'Gallery', 10, '#cbd5e1', 'center', '600', true);
+    }
+
+    /**
+     * @param  \GdImage  $canvas
+     */
+    protected function drawRoomStatus(mixed $canvas, int $x, int $y, int $width, int $height, int $fontSize): void
+    {
+        $split = (int) round($width * 0.6);
+        $this->filledRect($canvas, $x, $y, $split, $height, '#15803d', 1);
+        $this->filledRect($canvas, $x + $split, $y, $width - $split, $height, '#0f172a', 1);
+        $this->drawTextBlock($canvas, $x + 8, $y + 8, $split - 16, (int) ($height * 0.3), 'Meeting room', max(8, (int) ($fontSize * 0.8)), '#ffffff', 'left', '700');
+        $this->drawTextBlock($canvas, $x + 8, $y + (int) ($height * 0.55), $split - 16, (int) ($height * 0.35), 'AVAILABLE', max(8, (int) ($fontSize * 0.7)), '#86efac', 'left', '700', true);
+        $this->drawTextBlock($canvas, $x + $split + 8, $y + 8, $width - $split - 16, $height - 16, 'Up next', max(7, (int) ($fontSize * 0.45)), '#94a3b8', 'left', '400', true);
+    }
+
+    /**
+     * Flatten `a | b | c` rows into single display lines.
+     *
+     * @return list<string>
+     */
+    protected function parseDelimitedLines(mixed $value): array
+    {
+        return array_map(
+            fn (string $line): string => implode('  ', array_filter(array_map(trim(...), explode('|', $line)))),
+            $this->parseLines($value),
+        );
+    }
+
+    /**
+     * @return list<string>
+     */
+    protected function parseFirstCells(mixed $value, int $columns): array
+    {
+        $first = $this->parseLines($value)[0] ?? '';
+
+        if ($first === '') {
+            return [];
+        }
+
+        return array_values(array_filter(
+            array_slice(array_map(trim(...), explode('|', $first)), 0, $columns),
+        ));
     }
 
     /**

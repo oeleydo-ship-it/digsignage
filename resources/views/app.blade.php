@@ -3,7 +3,7 @@
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
-        <meta name="referrer" content="origin">
+        <meta name="referrer" content="strict-origin-when-cross-origin">
 
         {{-- Inline script to detect system dark mode preference and apply it immediately --}}
         <script>
@@ -31,8 +31,13 @@
             }
         </style>
 
-        <link rel="icon" href="/favicon.ico" sizes="any">
-        <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+        @php($customFavicon = app(\App\Support\PlatformSettings::class)->faviconUrl())
+        @if ($customFavicon)
+            <link rel="icon" href="{{ $customFavicon }}">
+        @else
+            <link rel="icon" href="/favicon.ico" sizes="any">
+            <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+        @endif
         <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 
         @fonts

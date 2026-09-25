@@ -1,0 +1,643 @@
+{
+    "backgrounds": [
+        {
+            "key": "lobby-welcome",
+            "label": "Lobby Welcome",
+            "src": "/images/catalog/lobby-welcome.svg",
+            "width": 1600,
+            "height": 900
+        },
+        {
+            "key": "lobby-welcome-portrait",
+            "label": "Lobby Welcome Portrait",
+            "src": "/images/catalog/lobby-welcome-portrait.svg",
+            "width": 900,
+            "height": 1600
+        },
+        {
+            "key": "corporate-lobby",
+            "label": "Corporate Lobby",
+            "src": "/images/catalog/corporate-lobby.svg",
+            "width": 1600,
+            "height": 900
+        },
+        {
+            "key": "internal-comms",
+            "label": "Internal Comms",
+            "src": "/images/catalog/internal-comms.svg",
+            "width": 1600,
+            "height": 900
+        },
+        {
+            "key": "portrait-internal-comms",
+            "label": "Portrait Internal Comms",
+            "src": "/images/catalog/portrait-internal-comms.svg",
+            "width": 900,
+            "height": 1600
+        },
+        {
+            "key": "ceo-message",
+            "label": "Ceo Message",
+            "src": "/images/catalog/ceo-message.svg",
+            "width": 1600,
+            "height": 900
+        },
+        {
+            "key": "portrait-ceo-message",
+            "label": "Portrait Ceo Message",
+            "src": "/images/catalog/portrait-ceo-message.svg",
+            "width": 900,
+            "height": 1600
+        },
+        {
+            "key": "onboarding-welcome",
+            "label": "Onboarding Welcome",
+            "src": "/images/catalog/onboarding-welcome.svg",
+            "width": 1600,
+            "height": 900
+        },
+        {
+            "key": "kpi-dashboard",
+            "label": "Kpi Dashboard",
+            "src": "/images/catalog/kpi-dashboard.svg",
+            "width": 1600,
+            "height": 900
+        },
+        {
+            "key": "portrait-kpi-stack",
+            "label": "Portrait Kpi Stack",
+            "src": "/images/catalog/portrait-kpi-stack.svg",
+            "width": 900,
+            "height": 1600
+        },
+        {
+            "key": "team-metrics-api",
+            "label": "Team Metrics Api",
+            "src": "/images/catalog/team-metrics-api.svg",
+            "width": 1600,
+            "height": 900
+        },
+        {
+            "key": "meeting-room",
+            "label": "Meeting Room",
+            "src": "/images/catalog/meeting-room.svg",
+            "width": 1600,
+            "height": 900
+        },
+        {
+            "key": "meeting-agenda-board",
+            "label": "Meeting Agenda Board",
+            "src": "/images/catalog/meeting-agenda-board.svg",
+            "width": 1600,
+            "height": 900
+        },
+        {
+            "key": "now-hiring",
+            "label": "Now Hiring",
+            "src": "/images/catalog/now-hiring.svg",
+            "width": 1600,
+            "height": 900
+        },
+        {
+            "key": "portrait-hiring-board",
+            "label": "Portrait Hiring Board",
+            "src": "/images/catalog/portrait-hiring-board.svg",
+            "width": 900,
+            "height": 1600
+        },
+        {
+            "key": "square-hiring",
+            "label": "Square Hiring",
+            "src": "/images/catalog/square-hiring.svg",
+            "width": 1200,
+            "height": 1200
+        },
+        {
+            "key": "healthcare-waiting-room",
+            "label": "Healthcare Waiting Room",
+            "src": "/images/catalog/healthcare-waiting-room.svg",
+            "width": 1600,
+            "height": 900
+        },
+        {
+            "key": "healthcare-wayfinding",
+            "label": "Healthcare Wayfinding",
+            "src": "/images/catalog/healthcare-wayfinding.svg",
+            "width": 1600,
+            "height": 900
+        },
+        {
+            "key": "patient-safety-reminder",
+            "label": "Patient Safety Reminder",
+            "src": "/images/catalog/patient-safety-reminder.svg",
+            "width": 1600,
+            "height": 900
+        },
+        {
+            "key": "clinic-hours-board",
+            "label": "Clinic Hours Board",
+            "src": "/images/catalog/clinic-hours-board.svg",
+            "width": 1600,
+            "height": 900
+        },
+        {
+            "key": "portrait-patient-info",
+            "label": "Portrait Patient Info",
+            "src": "/images/catalog/portrait-patient-info.svg",
+            "width": 900,
+            "height": 1600
+        },
+        {
+            "key": "square-wellness-tip",
+            "label": "Square Wellness Tip",
+            "src": "/images/catalog/square-wellness-tip.svg",
+            "width": 1200,
+            "height": 1200
+        },
+        {
+            "key": "restaurant-menu",
+            "label": "Restaurant Menu",
+            "src": "/images/catalog/restaurant-menu.svg",
+            "width": 1600,
+            "height": 900
+        },
+        {
+            "key": "menu-breakfast-lunch",
+            "label": "Menu Breakfast Lunch",
+            "src": "/images/catalog/menu-breakfast-lunch.svg",
+            "width": 1600,
+            "height": 900
+        },
+        {
+            "key": "daily-specials-board",
+            "label": "Daily Specials Board",
+            "src": "/images/catalog/daily-specials-board.svg",
+            "width": 1600,
+            "height": 900
+        },
+        {
+            "key": "allergen-notice",
+            "label": "Allergen Notice",
+            "src": "/images/catalog/allergen-notice.svg",
+            "width": 1600,
+            "height": 900
+        },
+        {
+            "key": "portrait-menu-board",
+            "label": "Portrait Menu Board",
+            "src": "/images/catalog/portrait-menu-board.svg",
+            "width": 900,
+            "height": 1600
+        },
+        {
+            "key": "square-menu-special",
+            "label": "Square Menu Special",
+            "src": "/images/catalog/square-menu-special.svg",
+            "width": 1200,
+            "height": 1200
+        },
+        {
+            "key": "retail-promo",
+            "label": "Retail Promo",
+            "src": "/images/catalog/retail-promo.svg",
+            "width": 1600,
+            "height": 900
+        },
+        {
+            "key": "retail-promo-portrait",
+            "label": "Retail Promo Portrait",
+            "src": "/images/catalog/retail-promo-portrait.svg",
+            "width": 900,
+            "height": 1600
+        },
+        {
+            "key": "new-arrivals",
+            "label": "New Arrivals",
+            "src": "/images/catalog/new-arrivals.svg",
+            "width": 1600,
+            "height": 900
+        },
+        {
+            "key": "flash-sale",
+            "label": "Flash Sale",
+            "src": "/images/catalog/flash-sale.svg",
+            "width": 1600,
+            "height": 900
+        },
+        {
+            "key": "square-retail-sale",
+            "label": "Square Retail Sale",
+            "src": "/images/catalog/square-retail-sale.svg",
+            "width": 1200,
+            "height": 1200
+        },
+        {
+            "key": "square-product-feature",
+            "label": "Square Product Feature",
+            "src": "/images/catalog/square-product-feature.svg",
+            "width": 1200,
+            "height": 1200
+        },
+        {
+            "key": "square-brand-spotlight",
+            "label": "Square Brand Spotlight",
+            "src": "/images/catalog/square-brand-spotlight.svg",
+            "width": 1200,
+            "height": 1200
+        },
+        {
+            "key": "education-campus",
+            "label": "Education Campus",
+            "src": "/images/catalog/education-campus.svg",
+            "width": 1600,
+            "height": 900
+        },
+        {
+            "key": "exam-schedule",
+            "label": "Exam Schedule",
+            "src": "/images/catalog/exam-schedule.svg",
+            "width": 1600,
+            "height": 900
+        },
+        {
+            "key": "campus-events-board",
+            "label": "Campus Events Board",
+            "src": "/images/catalog/campus-events-board.svg",
+            "width": 1600,
+            "height": 900
+        },
+        {
+            "key": "hospitality-welcome",
+            "label": "Hospitality Welcome",
+            "src": "/images/catalog/hospitality-welcome.svg",
+            "width": 1600,
+            "height": 900
+        },
+        {
+            "key": "hotel-amenities",
+            "label": "Hotel Amenities",
+            "src": "/images/catalog/hotel-amenities.svg",
+            "width": 1600,
+            "height": 900
+        },
+        {
+            "key": "portrait-hotel-amenities",
+            "label": "Portrait Hotel Amenities",
+            "src": "/images/catalog/portrait-hotel-amenities.svg",
+            "width": 900,
+            "height": 1600
+        },
+        {
+            "key": "guest-check-in",
+            "label": "Guest Check In",
+            "src": "/images/catalog/guest-check-in.svg",
+            "width": 1600,
+            "height": 900
+        },
+        {
+            "key": "property-showcase",
+            "label": "Property Showcase",
+            "src": "/images/catalog/property-showcase.svg",
+            "width": 1600,
+            "height": 900
+        },
+        {
+            "key": "portrait-property-listing",
+            "label": "Portrait Property Listing",
+            "src": "/images/catalog/portrait-property-listing.svg",
+            "width": 900,
+            "height": 1600
+        },
+        {
+            "key": "events-agenda",
+            "label": "Events Agenda",
+            "src": "/images/catalog/events-agenda.svg",
+            "width": 1600,
+            "height": 900
+        },
+        {
+            "key": "event-countdown",
+            "label": "Event Countdown",
+            "src": "/images/catalog/event-countdown.svg",
+            "width": 1600,
+            "height": 900
+        },
+        {
+            "key": "square-event-teaser",
+            "label": "Square Event Teaser",
+            "src": "/images/catalog/square-event-teaser.svg",
+            "width": 1200,
+            "height": 1200
+        },
+        {
+            "key": "sponsor-showcase",
+            "label": "Sponsor Showcase",
+            "src": "/images/catalog/sponsor-showcase.svg",
+            "width": 1600,
+            "height": 900
+        },
+        {
+            "key": "portrait-sponsor-list",
+            "label": "Portrait Sponsor List",
+            "src": "/images/catalog/portrait-sponsor-list.svg",
+            "width": 900,
+            "height": 1600
+        },
+        {
+            "key": "transport-departures",
+            "label": "Transport Departures",
+            "src": "/images/catalog/transport-departures.svg",
+            "width": 1600,
+            "height": 900
+        },
+        {
+            "key": "transit-departures-table",
+            "label": "Transit Departures Table",
+            "src": "/images/catalog/transit-departures-table.svg",
+            "width": 1600,
+            "height": 900
+        },
+        {
+            "key": "news-rss-wall",
+            "label": "News Rss Wall",
+            "src": "/images/catalog/news-rss-wall.svg",
+            "width": 1600,
+            "height": 900
+        },
+        {
+            "key": "social-community-wall",
+            "label": "Social Community Wall",
+            "src": "/images/catalog/social-community-wall.svg",
+            "width": 1600,
+            "height": 900
+        },
+        {
+            "key": "square-social-quote",
+            "label": "Square Social Quote",
+            "src": "/images/catalog/square-social-quote.svg",
+            "width": 1200,
+            "height": 1200
+        },
+        {
+            "key": "media-lounge",
+            "label": "Media Lounge",
+            "src": "/images/catalog/media-lounge.svg",
+            "width": 1600,
+            "height": 900
+        },
+        {
+            "key": "weather-world-clock",
+            "label": "Weather World Clock",
+            "src": "/images/catalog/weather-world-clock.svg",
+            "width": 1600,
+            "height": 900
+        },
+        {
+            "key": "announcements-notice",
+            "label": "Announcements Notice",
+            "src": "/images/catalog/announcements-notice.svg",
+            "width": 1600,
+            "height": 900
+        },
+        {
+            "key": "emergency-notice",
+            "label": "Emergency Notice",
+            "src": "/images/catalog/emergency-notice.svg",
+            "width": 1600,
+            "height": 900
+        },
+        {
+            "key": "portrait-wayfinding",
+            "label": "Portrait Wayfinding",
+            "src": "/images/catalog/portrait-wayfinding.svg",
+            "width": 900,
+            "height": 1600
+        },
+        {
+            "key": "cafe-illustrated-menu",
+            "label": "Cafe Illustrated Menu",
+            "src": "/images/catalog/cafe-illustrated-menu.svg",
+            "width": 1600,
+            "height": 900
+        },
+        {
+            "key": "safety-first-board",
+            "label": "Safety First Board",
+            "src": "/images/catalog/safety-first-board.svg",
+            "width": 1600,
+            "height": 900
+        },
+        {
+            "key": "sales-kpi-wall",
+            "label": "Sales Kpi Wall",
+            "src": "/images/catalog/sales-kpi-wall.svg",
+            "width": 1600,
+            "height": 900
+        },
+        {
+            "key": "hospital-directory",
+            "label": "Hospital Directory",
+            "src": "/images/catalog/hospital-directory.svg",
+            "width": 1600,
+            "height": 900
+        },
+        {
+            "key": "conference-live-schedule",
+            "label": "Conference Live Schedule",
+            "src": "/images/catalog/conference-live-schedule.svg",
+            "width": 1600,
+            "height": 900
+        },
+        {
+            "key": "team-celebrations",
+            "label": "Team Celebrations",
+            "src": "/images/catalog/team-celebrations.svg",
+            "width": 1600,
+            "height": 900
+        },
+        {
+            "key": "retail-mega-sale",
+            "label": "Retail Mega Sale",
+            "src": "/images/catalog/retail-mega-sale.svg",
+            "width": 1600,
+            "height": 900
+        },
+        {
+            "key": "hotel-lobby-forecast",
+            "label": "Hotel Lobby Forecast",
+            "src": "/images/catalog/hotel-lobby-forecast.svg",
+            "width": 1600,
+            "height": 900
+        },
+        {
+            "key": "gym-class-board",
+            "label": "Gym Class Board",
+            "src": "/images/catalog/gym-class-board.svg",
+            "width": 1600,
+            "height": 900
+        },
+        {
+            "key": "square-quote-of-the-day",
+            "label": "Square Quote Of The Day",
+            "src": "/images/catalog/square-quote-of-the-day.svg",
+            "width": 1200,
+            "height": 1200
+        },
+        {
+            "key": "portrait-icon-wayfinding",
+            "label": "Portrait Icon Wayfinding",
+            "src": "/images/catalog/portrait-icon-wayfinding.svg",
+            "width": 900,
+            "height": 1600
+        },
+        {
+            "key": "portrait-campus-open-day",
+            "label": "Portrait Campus Open Day",
+            "src": "/images/catalog/portrait-campus-open-day.svg",
+            "width": 900,
+            "height": 1600
+        },
+        {
+            "key": "room-door-sign",
+            "label": "Room Door Sign",
+            "src": "/images/catalog/room-door-sign.svg",
+            "width": 1600,
+            "height": 900
+        },
+        {
+            "key": "portrait-room-availability",
+            "label": "Portrait Room Availability",
+            "src": "/images/catalog/portrait-room-availability.svg",
+            "width": 900,
+            "height": 1600
+        },
+        {
+            "key": "room-door-panel",
+            "label": "Room Door Panel",
+            "src": "/images/catalog/room-door-panel.svg",
+            "width": 1600,
+            "height": 900
+        },
+        {
+            "key": "square-room-sign",
+            "label": "Square Room Sign",
+            "src": "/images/catalog/square-room-sign.svg",
+            "width": 1200,
+            "height": 1200
+        }
+    ],
+    "stickers": [
+        {
+            "key": "sale-burst",
+            "label": "Sale burst",
+            "src": "/images/library/stickers/sale-burst.svg",
+            "width": 400,
+            "height": 400
+        },
+        {
+            "key": "percent-off",
+            "label": "% off burst",
+            "src": "/images/library/stickers/percent-off.svg",
+            "width": 400,
+            "height": 400
+        },
+        {
+            "key": "new-badge",
+            "label": "New badge",
+            "src": "/images/library/stickers/new-badge.svg",
+            "width": 360,
+            "height": 360
+        },
+        {
+            "key": "best-seller",
+            "label": "Best seller seal",
+            "src": "/images/library/stickers/best-seller.svg",
+            "width": 400,
+            "height": 400
+        },
+        {
+            "key": "today-only",
+            "label": "Today only ribbon",
+            "src": "/images/library/stickers/today-only.svg",
+            "width": 720,
+            "height": 200
+        },
+        {
+            "key": "limited-offer",
+            "label": "Limited offer ribbon",
+            "src": "/images/library/stickers/limited-offer.svg",
+            "width": 720,
+            "height": 200
+        },
+        {
+            "key": "now-open",
+            "label": "Now open sign",
+            "src": "/images/library/stickers/now-open.svg",
+            "width": 640,
+            "height": 280
+        },
+        {
+            "key": "now-hiring",
+            "label": "Now hiring tag",
+            "src": "/images/library/stickers/now-hiring.svg",
+            "width": 640,
+            "height": 260
+        },
+        {
+            "key": "welcome",
+            "label": "Welcome script",
+            "src": "/images/library/stickers/welcome.svg",
+            "width": 800,
+            "height": 260
+        },
+        {
+            "key": "free-wifi",
+            "label": "Free Wi-Fi pill",
+            "src": "/images/library/stickers/free-wifi.svg",
+            "width": 560,
+            "height": 160
+        },
+        {
+            "key": "vegan",
+            "label": "Vegan leaf",
+            "src": "/images/library/stickers/vegan.svg",
+            "width": 320,
+            "height": 320
+        },
+        {
+            "key": "spicy",
+            "label": "Spicy chilli",
+            "src": "/images/library/stickers/spicy.svg",
+            "width": 320,
+            "height": 320
+        },
+        {
+            "key": "arrow-callout",
+            "label": "Arrow callout",
+            "src": "/images/library/stickers/arrow-callout.svg",
+            "width": 640,
+            "height": 220
+        },
+        {
+            "key": "star-rating",
+            "label": "Five stars",
+            "src": "/images/library/stickers/star-rating.svg",
+            "width": 640,
+            "height": 140
+        },
+        {
+            "key": "quote-mark",
+            "label": "Quote mark",
+            "src": "/images/library/stickers/quote-mark.svg",
+            "width": 300,
+            "height": 240
+        },
+        {
+            "key": "wave-divider",
+            "label": "Wave divider",
+            "src": "/images/library/stickers/wave-divider.svg",
+            "width": 1920,
+            "height": 180
+        }
+    ]
+}

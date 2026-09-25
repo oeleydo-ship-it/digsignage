@@ -541,6 +541,7 @@ final class CatalogTemplateLibrary
                 'featured' => false,
                 'document' => self::portraitSponsorList(1080, 1920),
             ],
+            ...CatalogShowcaseTemplates::definitions(),
         ];
     }
 
@@ -573,7 +574,7 @@ final class CatalogTemplateLibrary
     protected static function lobbyWelcome(): array
     {
         return self::canvas('#0f172a', [
-            self::image(0, 0, 1920, 1080, '/images/catalog/lobby-welcome.jpg', 0, 'Lobby photo'),
+            self::image(0, 0, 1920, 1080, '/images/catalog/lobby-welcome.svg', 0, 'Lobby photo'),
             self::shape(0, 0, 1920, 1080, '#0f172a', 1, 0, 0.72),
             self::text(80, 280, 1400, 80, 'Welcome', 36, '#93c5fd', 2),
             self::text(80, 360, 1500, 160, 'You have arrived', 88, '#ffffff', 3),
@@ -593,7 +594,7 @@ final class CatalogTemplateLibrary
     protected static function newsRssWall(): array
     {
         return self::canvas('#020617', [
-            self::image(0, 0, 1920, 1080, '/images/catalog/news-rss-wall.jpg', 0, 'Newsroom photo'),
+            self::image(0, 0, 1920, 1080, '/images/catalog/news-rss-wall.svg', 0, 'Newsroom photo'),
             self::shape(0, 0, 1920, 1080, '#020617', 1, 0, 0.78),
             self::text(64, 40, 1100, 70, 'Headlines', 48, '#ffffff', 2),
             self::el('clock', 1500, 36, 360, 90, [
@@ -623,7 +624,7 @@ final class CatalogTemplateLibrary
     protected static function meetingRoom(): array
     {
         return self::canvas('#111827', [
-            self::image(0, 0, 1920, 1080, '/images/catalog/meeting-room.jpg', 0, 'Meeting room photo'),
+            self::image(0, 0, 1920, 1080, '/images/catalog/meeting-room.svg', 0, 'Meeting room photo'),
             self::shape(0, 0, 1920, 1080, '#111827', 1, 0, 0.72),
             self::shape(0, 0, 1920, 160, '#1d4ed8', 2, 0, 0.92),
             self::text(64, 40, 900, 80, 'This room', 40, '#dbeafe', 3),
@@ -661,7 +662,7 @@ final class CatalogTemplateLibrary
     protected static function socialWall(): array
     {
         return self::canvas('#0f172a', [
-            self::image(0, 0, 1920, 1080, '/images/catalog/social-community-wall.jpg', 0, 'Backdrop'),
+            self::image(0, 0, 1920, 1080, '/images/catalog/social-community-wall.svg', 0, 'Backdrop'),
             self::shape(0, 0, 1920, 1080, '#0f172a', 1, 0, 0.82),
             self::text(80, 48, 1400, 80, 'Community', 52, '#ffffff', 2),
             self::el('social_wall', 80, 160, 1760, 760, [
@@ -680,7 +681,7 @@ final class CatalogTemplateLibrary
     protected static function weatherWorldClock(): array
     {
         return self::canvas('#082f49', [
-            self::image(0, 0, 1920, 1080, '/images/catalog/weather-world-clock.jpg', 0, 'Skyline photo'),
+            self::image(0, 0, 1920, 1080, '/images/catalog/weather-world-clock.svg', 0, 'Skyline photo'),
             self::shape(0, 0, 1920, 1080, '#082f49', 1, 0, 0.76),
             self::text(64, 48, 900, 70, 'Conditions', 48, '#e0f2fe', 2),
             self::el('date', 1400, 48, 456, 80, [
@@ -708,7 +709,7 @@ final class CatalogTemplateLibrary
     protected static function internalComms(): array
     {
         return self::canvas('#1e293b', [
-            self::image(0, 0, 1920, 1080, '/images/catalog/internal-comms.jpg', 0, 'Office photo'),
+            self::image(0, 0, 1920, 1080, '/images/catalog/internal-comms.svg', 0, 'Office photo'),
             self::shape(0, 0, 1920, 1080, '#1e293b', 1, 0, 0.72),
             self::el('alert_banner', 40, 40, 1840, 280, [
                 'severity' => 'info',
@@ -737,7 +738,7 @@ final class CatalogTemplateLibrary
     protected static function mediaLounge(): array
     {
         return self::canvas('#111827', [
-            self::image(0, 0, 1920, 1080, '/images/catalog/media-lounge.jpg', 0, 'Lounge photo'),
+            self::image(0, 0, 1920, 1080, '/images/catalog/media-lounge.svg', 0, 'Lounge photo'),
             self::shape(0, 0, 1920, 1080, '#111827', 1, 0, 0.7),
             self::text(64, 28, 1100, 60, 'Now showing', 36, '#f8fafc', 2),
             self::el('youtube', 64, 110, 1792, 800, [
@@ -753,7 +754,7 @@ final class CatalogTemplateLibrary
     protected static function healthcareWaitingRoom(): array
     {
         return self::canvas('#0f766e', [
-            self::image(0, 0, 1920, 1080, '/images/catalog/healthcare-waiting-room.jpg', 0, 'Clinic photo'),
+            self::image(0, 0, 1920, 1080, '/images/catalog/healthcare-waiting-room.svg', 0, 'Clinic photo'),
             self::shape(0, 0, 1920, 1080, '#0f766e', 1, 0, 0.7),
             self::shape(0, 0, 1920, 180, '#0b4f4a', 2, 0, 0.45),
             self::text(64, 36, 1100, 70, 'Welcome to Riverside Clinic', 52, '#ffffff', 2),
@@ -781,7 +782,7 @@ final class CatalogTemplateLibrary
     protected static function healthcareWayfinding(): array
     {
         return self::canvas('#f8fafc', [
-            self::image(0, 0, 1920, 1080, '/images/catalog/healthcare-wayfinding.jpg', 0, 'Clinic corridor'),
+            self::image(0, 0, 1920, 1080, '/images/catalog/healthcare-wayfinding.svg', 0, 'Clinic corridor'),
             self::shape(0, 0, 1920, 1080, '#f8fafc', 1, 0, 0.82),
             self::shape(0, 0, 80, 1080, '#0369a1', 2),
             self::text(140, 60, 1400, 80, 'Find your department', 56, '#0f172a', 3),
@@ -814,7 +815,7 @@ final class CatalogTemplateLibrary
     protected static function corporateLobby(): array
     {
         return self::canvas('#0f172a', [
-            self::image(0, 0, 720, 1080, '/images/catalog/corporate-lobby.jpg', 0, 'Lobby photo'),
+            self::image(0, 0, 720, 1080, '/images/catalog/corporate-lobby.svg', 0, 'Lobby photo'),
             self::shape(0, 0, 720, 1080, '#0f172a', 1, 0, 0.62),
             self::text(64, 80, 580, 80, 'Good to see you', 40, '#bfdbfe', 2),
             self::text(64, 180, 580, 200, 'Northridge HQ', 64, '#ffffff', 3),
@@ -847,7 +848,7 @@ final class CatalogTemplateLibrary
                 'color' => '#fff7ed',
                 'fontSize' => 36,
             ], 4, 'Menu'),
-            self::image(1280, 160, 640, 920, '/images/catalog/restaurant-menu.jpg', 5, 'Dish photo'),
+            self::image(1280, 160, 640, 920, '/images/catalog/restaurant-menu.svg', 5, 'Dish photo'),
             self::shape(1280, 160, 640, 920, '#292524', 6, 20, 0.45),
             self::text(1336, 220, 528, 50, 'Chef’s special', 28, '#fdba74', 7),
             self::text(1336, 300, 528, 220, "Saffron rice\nand roasted vegetables", 40, '#fff7ed', 8),
@@ -862,7 +863,7 @@ final class CatalogTemplateLibrary
     protected static function menuBoard(): array
     {
         return self::canvas('#111827', [
-            self::image(0, 0, 1920, 220, '/images/catalog/menu-breakfast-lunch.jpg', 0, 'Food photo'),
+            self::image(0, 0, 1920, 220, '/images/catalog/menu-breakfast-lunch.svg', 0, 'Food photo'),
             self::shape(0, 0, 1920, 220, '#111827', 1, 0, 0.45),
             self::text(72, 48, 1776, 100, 'All-day board', 72, '#ffffff', 2),
             self::el('menu_board', 0, 220, 960, 860, [
@@ -888,7 +889,7 @@ final class CatalogTemplateLibrary
     protected static function retailPromo(): array
     {
         return self::canvas('#1e1b4b', [
-            self::image(0, 0, 1920, 1080, '/images/catalog/retail-promo.jpg', 0, 'Campaign photo'),
+            self::image(0, 0, 1920, 1080, '/images/catalog/retail-promo.svg', 0, 'Campaign photo'),
             self::shape(0, 0, 1920, 1080, '#1e1b4b', 1, 0, 0.78),
             self::text(80, 80, 1200, 80, 'Weekend sale', 28, '#c4b5fd', 2),
             self::text(80, 170, 1400, 180, '30% off autumn', 92, '#ffffff', 3),
@@ -912,7 +913,7 @@ final class CatalogTemplateLibrary
     protected static function educationCampus(): array
     {
         return self::canvas('#172554', [
-            self::image(0, 0, 1920, 1080, '/images/catalog/education-campus.jpg', 0, 'Campus photo'),
+            self::image(0, 0, 1920, 1080, '/images/catalog/education-campus.svg', 0, 'Campus photo'),
             self::shape(0, 0, 1920, 1080, '#172554', 1, 0, 0.76),
             self::text(64, 48, 1200, 80, 'Campus today', 52, '#ffffff', 2),
             self::el('date', 1400, 48, 460, 80, ['format' => 'long', 'color' => '#93c5fd', 'fontSize' => 28], 3, 'Date'),
@@ -938,7 +939,7 @@ final class CatalogTemplateLibrary
     protected static function hospitalityWelcome(): array
     {
         return self::canvas('#14532d', [
-            self::image(0, 0, 1920, 1080, '/images/catalog/hospitality-welcome.jpg', 0, 'Hotel photo'),
+            self::image(0, 0, 1920, 1080, '/images/catalog/hospitality-welcome.svg', 0, 'Hotel photo'),
             self::shape(0, 0, 1920, 1080, '#14532d', 1, 0, 0.72),
             self::text(80, 70, 1400, 90, 'Welcome to Palm Court', 56, '#ecfccb', 2),
             self::text(80, 180, 1000, 50, 'A restful stay starts here', 26, '#bbf7d0', 3),
@@ -959,7 +960,7 @@ final class CatalogTemplateLibrary
     protected static function eventsAgenda(): array
     {
         return self::canvas('#111827', [
-            self::image(0, 0, 1920, 1080, '/images/catalog/events-agenda.jpg', 0, 'Conference photo'),
+            self::image(0, 0, 1920, 1080, '/images/catalog/events-agenda.svg', 0, 'Conference photo'),
             self::shape(0, 0, 1920, 1080, '#111827', 1, 0, 0.72),
             self::text(64, 40, 1400, 70, 'Summit agenda', 48, '#ffffff', 2),
             self::el('calendar', 64, 140, 1792, 800, [
@@ -978,7 +979,7 @@ final class CatalogTemplateLibrary
     protected static function transportDepartures(): array
     {
         return self::canvas('#020617', [
-            self::image(0, 0, 1920, 1080, '/images/catalog/transport-departures.jpg', 0, 'Transit photo'),
+            self::image(0, 0, 1920, 1080, '/images/catalog/transport-departures.svg', 0, 'Transit photo'),
             self::shape(0, 0, 1920, 1080, '#020617', 1, 0, 0.78),
             self::text(64, 36, 900, 70, 'Departures', 48, '#38bdf8', 2),
             self::el('clock', 1500, 30, 360, 90, ['format' => 'HH:mm:ss', 'color' => '#e0f2fe', 'fontSize' => 44], 3, 'Clock'),
@@ -998,7 +999,7 @@ final class CatalogTemplateLibrary
     protected static function announcement(): array
     {
         return self::canvas('#1e293b', [
-            self::image(0, 0, 1920, 1080, '/images/catalog/announcements-notice.jpg', 0, 'Building photo'),
+            self::image(0, 0, 1920, 1080, '/images/catalog/announcements-notice.svg', 0, 'Building photo'),
             self::shape(0, 0, 1920, 1080, '#1e293b', 1, 0, 0.78),
             self::el('alert_banner', 80, 80, 1760, 760, [
                 'severity' => 'warning',
@@ -1017,7 +1018,7 @@ final class CatalogTemplateLibrary
     protected static function emergencyNotice(): array
     {
         return self::canvas('#7f1d1d', [
-            self::image(0, 0, 1920, 1080, '/images/catalog/emergency-notice.jpg', 0, 'Exit photo'),
+            self::image(0, 0, 1920, 1080, '/images/catalog/emergency-notice.svg', 0, 'Exit photo'),
             self::shape(0, 0, 1920, 1080, '#7f1d1d', 1, 0, 0.82),
             self::el('alert_banner', 40, 40, 1840, 1000, [
                 'severity' => 'critical',
@@ -1040,7 +1041,7 @@ final class CatalogTemplateLibrary
         $heroHeight = (int) round($height * 0.5);
 
         return self::canvas('#0f172a', [
-            self::image(0, 0, $width, $heroHeight, '/images/catalog/lobby-welcome-portrait.jpg', 0, 'Lobby photo'),
+            self::image(0, 0, $width, $heroHeight, '/images/catalog/lobby-welcome-portrait.svg', 0, 'Lobby photo'),
             self::shape(0, 0, $width, $height, '#0f172a', 1, 0, 0.68),
             self::text((int) round(48 * $scale), (int) round($height * 0.38), (int) round($width - 96 * $scale), (int) round(60 * $scale), 'Welcome', (int) round(32 * $scale), '#93c5fd', 2),
             self::text((int) round(48 * $scale), (int) round($height * 0.44), (int) round($width - 96 * $scale), (int) round(120 * $scale), 'You have arrived', (int) round(64 * $scale), '#ffffff', 3),
@@ -1066,7 +1067,7 @@ final class CatalogTemplateLibrary
         $tickerY = $height - $tickerHeight;
 
         return self::canvas('#1c1917', [
-            self::image(0, $headerHeight, $width, $photoHeight, '/images/catalog/portrait-menu-board.jpg', 0, 'Food photo'),
+            self::image(0, $headerHeight, $width, $photoHeight, '/images/catalog/portrait-menu-board.svg', 0, 'Food photo'),
             self::shape(0, $headerHeight, $width, $photoHeight, '#1c1917', 1, 0, 0.28),
             self::shape(0, 0, $width, $headerHeight, '#7c2d12', 2),
             self::text((int) round(48 * $scale), (int) round(36 * $scale), (int) round($width * 0.65), (int) round(70 * $scale), "Today's kitchen", (int) round(44 * $scale), '#fff7ed', 3),
@@ -1100,7 +1101,7 @@ final class CatalogTemplateLibrary
         $qrSize = (int) round(min(300 * $scale, $width * 0.35));
 
         return self::canvas('#f8fafc', [
-            self::image(0, 0, $width, $heroHeight, '/images/catalog/portrait-wayfinding.jpg', 0, 'Lobby photo'),
+            self::image(0, 0, $width, $heroHeight, '/images/catalog/portrait-wayfinding.svg', 0, 'Lobby photo'),
             self::shape(0, 0, $width, $heroHeight, '#0f172a', 1, 0, 0.35),
             self::shape(0, 0, $accentWidth, $height, '#0369a1', 2),
             self::text((int) round(90 * $scale), (int) round(56 * $scale), (int) round($width - 120 * $scale), (int) round(70 * $scale), 'Find your department', (int) round(44 * $scale), '#ffffff', 3),
@@ -1138,7 +1139,7 @@ final class CatalogTemplateLibrary
         $qrSize = (int) round(min(280 * $scale, $width * 0.32));
 
         return self::canvas('#1e1b4b', [
-            self::image(0, 0, $width, $heroHeight, '/images/catalog/retail-promo-portrait.jpg', 0, 'Campaign photo'),
+            self::image(0, 0, $width, $heroHeight, '/images/catalog/retail-promo-portrait.svg', 0, 'Campaign photo'),
             self::shape(0, 0, $width, $height, '#1e1b4b', 1, 0, 0.75),
             self::text((int) round(48 * $scale), (int) round(56 * $scale), (int) round($width - 96 * $scale), (int) round(60 * $scale), 'Weekend sale', (int) round(26 * $scale), '#c4b5fd', 2),
             self::text((int) round(48 * $scale), (int) round(120 * $scale), (int) round($width - 96 * $scale), (int) round(140 * $scale), '30% off autumn', (int) round(72 * $scale), '#ffffff', 3),
@@ -1169,7 +1170,7 @@ final class CatalogTemplateLibrary
         $photoHeight = (int) round(260 * $scale);
 
         return self::canvas('#1e293b', [
-            self::image(0, $alertHeight + (int) round(72 * $scale), $width, $photoHeight, '/images/catalog/portrait-internal-comms.jpg', 0, 'Office photo'),
+            self::image(0, $alertHeight + (int) round(72 * $scale), $width, $photoHeight, '/images/catalog/portrait-internal-comms.svg', 0, 'Office photo'),
             self::shape(0, $alertHeight + (int) round(72 * $scale), $width, $photoHeight, '#1e293b', 1, 0, 0.35),
             self::el('alert_banner', (int) round(40 * $scale), (int) round(40 * $scale), (int) round($width - 80 * $scale), $alertHeight, [
                 'severity' => 'info',
@@ -1194,7 +1195,7 @@ final class CatalogTemplateLibrary
     protected static function ceoMessage(): array
     {
         return self::canvas('#0c4a6e', [
-            self::image(0, 0, 960, 1080, '/images/catalog/ceo-message.jpg', 0, 'Executive photo'),
+            self::image(0, 0, 960, 1080, '/images/catalog/ceo-message.svg', 0, 'Executive photo'),
             self::shape(960, 0, 960, 1080, '#0c4a6e', 1),
             self::text(1020, 120, 820, 50, 'A message from leadership', 24, '#7dd3fc', 2),
             self::text(1020, 190, 820, 200, 'Building what matters together', 56, '#ffffff', 3),
@@ -1211,7 +1212,7 @@ final class CatalogTemplateLibrary
     protected static function kpiDashboard(): array
     {
         return self::canvas('#111827', [
-            self::image(0, 0, 1920, 280, '/images/catalog/kpi-dashboard.jpg', 0, 'Workplace photo'),
+            self::image(0, 0, 1920, 280, '/images/catalog/kpi-dashboard.svg', 0, 'Workplace photo'),
             self::shape(0, 0, 1920, 280, '#1e3a8a', 1, 0, 0.62),
             self::text(64, 40, 900, 70, 'Operations dashboard', 44, '#ffffff', 2),
             self::el('date', 1400, 40, 456, 70, ['format' => 'long', 'color' => '#93c5fd', 'fontSize' => 26], 3, 'Date'),
@@ -1243,7 +1244,7 @@ final class CatalogTemplateLibrary
     protected static function meetingAgendaBoard(): array
     {
         return self::canvas('#1e293b', [
-            self::image(0, 0, 1920, 240, '/images/catalog/meeting-agenda-board.jpg', 0, 'Boardroom photo'),
+            self::image(0, 0, 1920, 240, '/images/catalog/meeting-agenda-board.svg', 0, 'Boardroom photo'),
             self::shape(0, 0, 1920, 240, '#334155', 1, 0, 0.7),
             self::text(64, 50, 800, 70, 'Today’s agenda', 44, '#ffffff', 2),
             self::el('clock', 1500, 42, 360, 90, ['format' => 'HH:mm', 'color' => '#38bdf8', 'fontSize' => 52], 3, 'Clock'),
@@ -1270,7 +1271,7 @@ final class CatalogTemplateLibrary
     protected static function patientSafetyReminder(): array
     {
         return self::canvas('#ecfdf5', [
-            self::image(0, 0, 1920, 1080, '/images/catalog/patient-safety-reminder.jpg', 0, 'Clinic photo'),
+            self::image(0, 0, 1920, 1080, '/images/catalog/patient-safety-reminder.svg', 0, 'Clinic photo'),
             self::shape(0, 0, 1920, 1080, '#ecfdf5', 1, 0, 0.86),
             self::el('alert_banner', 64, 64, 1792, 320, [
                 'severity' => 'info',
@@ -1301,7 +1302,7 @@ final class CatalogTemplateLibrary
     protected static function clinicHoursBoard(): array
     {
         return self::canvas('#f0f9ff', [
-            self::image(0, 0, 1920, 280, '/images/catalog/clinic-hours-board.jpg', 0, 'Clinic photo'),
+            self::image(0, 0, 1920, 280, '/images/catalog/clinic-hours-board.svg', 0, 'Clinic photo'),
             self::shape(0, 0, 1920, 280, '#f0f9ff', 1, 0, 0.55),
             self::text(64, 48, 1200, 70, 'Clinic hours', 48, '#0c4a6e', 2),
             self::el('date', 1400, 48, 456, 70, ['format' => 'long', 'color' => '#0369a1', 'fontSize' => 28], 3, 'Date'),
@@ -1321,7 +1322,7 @@ final class CatalogTemplateLibrary
     protected static function allergenNotice(): array
     {
         return self::canvas('#292524', [
-            self::image(1320, 300, 520, 680, '/images/catalog/allergen-notice.jpg', 0, 'Kitchen photo'),
+            self::image(1320, 300, 520, 680, '/images/catalog/allergen-notice.svg', 0, 'Kitchen photo'),
             self::shape(1320, 300, 520, 680, '#292524', 1, 0, 0.35),
             self::el('alert_banner', 48, 48, 1824, 220, [
                 'severity' => 'warning',
@@ -1347,7 +1348,7 @@ final class CatalogTemplateLibrary
     protected static function dailySpecialsBoard(): array
     {
         return self::canvas('#431407', [
-            self::image(0, 0, 1920, 520, '/images/catalog/daily-specials-board.jpg', 0, 'Specials photo'),
+            self::image(0, 0, 1920, 520, '/images/catalog/daily-specials-board.svg', 0, 'Specials photo'),
             self::shape(0, 0, 1920, 1080, '#431407', 1, 0, 0.55),
             self::text(64, 80, 1200, 60, 'Chef’s picks today', 32, '#fed7aa', 2),
             self::text(64, 150, 1400, 120, 'Seasonal tasting menu', 72, '#ffffff', 3),
@@ -1369,7 +1370,7 @@ final class CatalogTemplateLibrary
     protected static function newArrivals(): array
     {
         return self::canvas('#18181b', [
-            self::image(0, 0, 1080, 1080, '/images/catalog/new-arrivals.jpg', 0, 'Product photo'),
+            self::image(0, 0, 1080, 1080, '/images/catalog/new-arrivals.svg', 0, 'Product photo'),
             self::shape(1080, 0, 840, 1080, '#18181b', 1),
             self::text(1140, 120, 720, 50, 'Just landed', 28, '#a1a1aa', 2),
             self::text(1140, 180, 720, 160, 'Autumn collection', 64, '#ffffff', 3),
@@ -1385,7 +1386,7 @@ final class CatalogTemplateLibrary
     protected static function flashSale(): array
     {
         return self::canvas('#450a0a', [
-            self::image(0, 0, 1920, 1080, '/images/catalog/flash-sale.jpg', 0, 'Retail photo'),
+            self::image(0, 0, 1920, 1080, '/images/catalog/flash-sale.svg', 0, 'Retail photo'),
             self::shape(0, 0, 1920, 1080, '#450a0a', 1, 0, 0.72),
             self::text(80, 100, 1200, 60, 'Flash sale', 32, '#fecaca', 2),
             self::text(80, 180, 1400, 180, '24 hours only', 96, '#ffffff', 3),
@@ -1407,7 +1408,7 @@ final class CatalogTemplateLibrary
     protected static function examSchedule(): array
     {
         return self::canvas('#1e3a8a', [
-            self::image(0, 0, 1920, 1080, '/images/catalog/exam-schedule.jpg', 0, 'Campus photo'),
+            self::image(0, 0, 1920, 1080, '/images/catalog/exam-schedule.svg', 0, 'Campus photo'),
             self::shape(0, 0, 1920, 1080, '#1e3a8a', 1, 0, 0.78),
             self::text(64, 48, 1200, 70, 'Exam schedule', 48, '#ffffff', 2),
             self::el('date', 1400, 48, 456, 70, ['format' => 'long', 'color' => '#bfdbfe', 'fontSize' => 28], 3, 'Date'),
@@ -1427,7 +1428,7 @@ final class CatalogTemplateLibrary
     protected static function campusEventsBoard(): array
     {
         return self::canvas('#312e81', [
-            self::image(0, 0, 1920, 1080, '/images/catalog/campus-events-board.jpg', 0, 'Campus photo'),
+            self::image(0, 0, 1920, 1080, '/images/catalog/campus-events-board.svg', 0, 'Campus photo'),
             self::shape(0, 0, 1920, 1080, '#312e81', 1, 0, 0.76),
             self::text(64, 48, 1000, 70, 'Campus events', 48, '#ffffff', 2),
             self::el('calendar', 64, 160, 1100, 740, [
@@ -1453,7 +1454,7 @@ final class CatalogTemplateLibrary
     protected static function nowHiring(): array
     {
         return self::canvas('#0f172a', [
-            self::image(0, 0, 960, 1080, '/images/catalog/now-hiring.jpg', 0, 'Team photo'),
+            self::image(0, 0, 960, 1080, '/images/catalog/now-hiring.svg', 0, 'Team photo'),
             self::shape(0, 0, 960, 1080, '#1d4ed8', 1, 0, 0.68),
             self::text(80, 120, 800, 60, 'We are hiring', 32, '#bfdbfe', 2),
             self::text(80, 200, 800, 220, 'Join our growing team', 72, '#ffffff', 3),
@@ -1470,7 +1471,7 @@ final class CatalogTemplateLibrary
     protected static function onboardingWelcome(): array
     {
         return self::canvas('#134e4a', [
-            self::image(0, 0, 1920, 420, '/images/catalog/onboarding-welcome.jpg', 0, 'Welcome photo'),
+            self::image(0, 0, 1920, 420, '/images/catalog/onboarding-welcome.svg', 0, 'Welcome photo'),
             self::shape(0, 0, 1920, 420, '#134e4a', 1, 0, 0.58),
             self::el('alert_banner', 64, 64, 1792, 260, [
                 'severity' => 'info',
@@ -1500,7 +1501,7 @@ final class CatalogTemplateLibrary
     protected static function propertyShowcase(): array
     {
         return self::canvas('#1c1917', [
-            self::image(0, 0, 1200, 1080, '/images/catalog/property-showcase.jpg', 0, 'Property photo'),
+            self::image(0, 0, 1200, 1080, '/images/catalog/property-showcase.svg', 0, 'Property photo'),
             self::shape(1200, 0, 720, 1080, '#1c1917', 1),
             self::text(1250, 100, 620, 50, 'Now showing', 26, '#a8a29e', 2),
             self::text(1250, 160, 620, 140, 'Harbor View Residence', 52, '#ffffff', 3),
@@ -1520,7 +1521,7 @@ final class CatalogTemplateLibrary
     protected static function transitDeparturesTable(): array
     {
         return self::canvas('#020617', [
-            self::image(0, 0, 1920, 320, '/images/catalog/transit-departures-table.jpg', 0, 'Transit photo'),
+            self::image(0, 0, 1920, 320, '/images/catalog/transit-departures-table.svg', 0, 'Transit photo'),
             self::shape(0, 0, 1920, 320, '#020617', 1, 0, 0.62),
             self::text(64, 36, 900, 70, 'Departures', 48, '#38bdf8', 2),
             self::el('clock', 1500, 30, 360, 90, ['format' => 'HH:mm:ss', 'color' => '#e0f2fe', 'fontSize' => 44], 3, 'Clock'),
@@ -1540,7 +1541,7 @@ final class CatalogTemplateLibrary
     protected static function hotelAmenities(): array
     {
         return self::canvas('#14532d', [
-            self::image(0, 0, 1920, 1080, '/images/catalog/hotel-amenities.jpg', 0, 'Hotel photo'),
+            self::image(0, 0, 1920, 1080, '/images/catalog/hotel-amenities.svg', 0, 'Hotel photo'),
             self::shape(0, 0, 1920, 1080, '#14532d', 1, 0, 0.74),
             self::text(80, 60, 1400, 80, 'Guest services', 52, '#dcfce7', 2),
             self::el('table', 80, 180, 1760, 720, [
@@ -1563,7 +1564,7 @@ final class CatalogTemplateLibrary
     protected static function guestCheckIn(): array
     {
         return self::canvas('#052e16', [
-            self::image(0, 0, 1920, 1080, '/images/catalog/guest-check-in.jpg', 0, 'Hotel lobby photo'),
+            self::image(0, 0, 1920, 1080, '/images/catalog/guest-check-in.svg', 0, 'Hotel lobby photo'),
             self::shape(0, 0, 1920, 1080, '#052e16', 1, 0, 0.74),
             self::text(80, 80, 1200, 80, 'Welcome', 56, '#bbf7d0', 2),
             self::el('room_info', 80, 200, 820, 720, [
@@ -1589,7 +1590,7 @@ final class CatalogTemplateLibrary
     protected static function eventCountdown(): array
     {
         return self::canvas('#4c1d95', [
-            self::image(0, 0, 1920, 1080, '/images/catalog/event-countdown.jpg', 0, 'Conference photo'),
+            self::image(0, 0, 1920, 1080, '/images/catalog/event-countdown.svg', 0, 'Conference photo'),
             self::shape(0, 0, 1920, 1080, '#4c1d95', 1, 0, 0.72),
             self::text(80, 80, 1400, 70, 'Summit 2026', 48, '#ddd6fe', 2),
             self::text(80, 160, 1400, 160, 'Doors open soon', 88, '#ffffff', 3),
@@ -1610,7 +1611,7 @@ final class CatalogTemplateLibrary
     protected static function sponsorShowcase(): array
     {
         return self::canvas('#0f172a', [
-            self::image(0, 0, 1920, 1080, '/images/catalog/sponsor-showcase.jpg', 0, 'Event backdrop'),
+            self::image(0, 0, 1920, 1080, '/images/catalog/sponsor-showcase.svg', 0, 'Event backdrop'),
             self::shape(0, 0, 1920, 1080, '#0f172a', 1, 0, 0.84),
             self::text(80, 48, 1400, 70, 'Our partners', 48, '#ffffff', 2),
             self::el('social_wall', 80, 160, 1760, 760, [
@@ -1628,7 +1629,7 @@ final class CatalogTemplateLibrary
     protected static function teamMetricsApi(): array
     {
         return self::canvas('#111827', [
-            self::image(0, 0, 1920, 220, '/images/catalog/team-metrics-api.jpg', 0, 'Office photo'),
+            self::image(0, 0, 1920, 220, '/images/catalog/team-metrics-api.svg', 0, 'Office photo'),
             self::shape(0, 0, 1920, 220, '#111827', 1, 0, 0.55),
             self::text(64, 50, 900, 60, 'Live metrics', 40, '#ffffff', 2),
             self::el('json_api', 64, 260, 900, 660, [
@@ -1653,7 +1654,7 @@ final class CatalogTemplateLibrary
     protected static function squareBrandSpotlight(): array
     {
         return self::canvas('#0c4a6e', [
-            self::image(0, 0, 1080, 720, '/images/catalog/square-brand-spotlight.jpg', 0, 'Brand photo'),
+            self::image(0, 0, 1080, 720, '/images/catalog/square-brand-spotlight.svg', 0, 'Brand photo'),
             self::shape(0, 720, 1080, 360, '#0c4a6e', 1),
             self::text(64, 760, 952, 60, 'Northridge', 40, '#7dd3fc', 2),
             self::text(64, 830, 952, 100, 'Ideas that scale', 56, '#ffffff', 3),
@@ -1667,7 +1668,7 @@ final class CatalogTemplateLibrary
     protected static function squareHiring(): array
     {
         return self::canvas('#1e3a8a', [
-            self::image(0, 0, 1080, 480, '/images/catalog/square-hiring.jpg', 0, 'Team photo'),
+            self::image(0, 0, 1080, 480, '/images/catalog/square-hiring.svg', 0, 'Team photo'),
             self::shape(0, 0, 1080, 480, '#1e3a8a', 1, 0, 0.45),
             self::text(64, 80, 952, 60, 'We are hiring', 32, '#bfdbfe', 2),
             self::text(64, 160, 952, 200, 'Build with us', 72, '#ffffff', 3),
@@ -1682,7 +1683,7 @@ final class CatalogTemplateLibrary
     protected static function squareMenuSpecial(): array
     {
         return self::canvas('#7c2d12', [
-            self::image(0, 0, 1080, 540, '/images/catalog/square-menu-special.jpg', 0, 'Dish photo'),
+            self::image(0, 0, 1080, 540, '/images/catalog/square-menu-special.svg', 0, 'Dish photo'),
             self::text(64, 580, 952, 50, 'Dish of the day', 28, '#fed7aa', 2),
             self::el('menu_board', 64, 640, 952, 380, [
                 'heading' => 'Special',
@@ -1700,7 +1701,7 @@ final class CatalogTemplateLibrary
     protected static function squareRetailSale(): array
     {
         return self::canvas('#581c87', [
-            self::image(0, 0, 1080, 1080, '/images/catalog/square-retail-sale.jpg', 0, 'Product photo'),
+            self::image(0, 0, 1080, 1080, '/images/catalog/square-retail-sale.svg', 0, 'Product photo'),
             self::shape(0, 0, 1080, 1080, '#581c87', 1, 0, 0.72),
             self::text(64, 80, 952, 60, 'Limited offer', 28, '#e9d5ff', 2),
             self::text(64, 150, 952, 180, '40% off', 96, '#ffffff', 3),
@@ -1720,7 +1721,7 @@ final class CatalogTemplateLibrary
     protected static function squareEventTeaser(): array
     {
         return self::canvas('#312e81', [
-            self::image(0, 0, 1080, 1080, '/images/catalog/square-event-teaser.jpg', 0, 'Stage photo'),
+            self::image(0, 0, 1080, 1080, '/images/catalog/square-event-teaser.svg', 0, 'Stage photo'),
             self::shape(0, 0, 1080, 1080, '#312e81', 1, 0, 0.72),
             self::text(64, 80, 952, 60, 'Main stage', 28, '#c7d2fe', 2),
             self::text(64, 150, 952, 160, 'Keynote preview', 64, '#ffffff', 3),
@@ -1740,7 +1741,7 @@ final class CatalogTemplateLibrary
     protected static function squareWellnessTip(): array
     {
         return self::canvas('#115e59', [
-            self::image(0, 0, 1080, 1080, '/images/catalog/square-wellness-tip.jpg', 0, 'Wellness photo'),
+            self::image(0, 0, 1080, 1080, '/images/catalog/square-wellness-tip.svg', 0, 'Wellness photo'),
             self::shape(0, 0, 1080, 1080, '#115e59', 1, 0, 0.72),
             self::el('alert_banner', 48, 48, 984, 420, [
                 'severity' => 'info',
@@ -1760,7 +1761,7 @@ final class CatalogTemplateLibrary
     protected static function squareSocialQuote(): array
     {
         return self::canvas('#1e293b', [
-            self::image(0, 0, 1080, 1080, '/images/catalog/square-social-quote.jpg', 0, 'Community photo'),
+            self::image(0, 0, 1080, 1080, '/images/catalog/square-social-quote.svg', 0, 'Community photo'),
             self::shape(0, 0, 1080, 1080, '#1e293b', 1, 0, 0.78),
             self::text(64, 120, 952, 400, '"Great teams make hard work feel lighter."', 48, '#ffffff', 2),
             self::text(64, 560, 952, 60, '@community', 28, '#94a3b8', 3),
@@ -1779,7 +1780,7 @@ final class CatalogTemplateLibrary
     protected static function squareProductFeature(): array
     {
         return self::canvas('#18181b', [
-            self::image(0, 0, 1080, 620, '/images/catalog/square-product-feature.jpg', 0, 'Product'),
+            self::image(0, 0, 1080, 620, '/images/catalog/square-product-feature.svg', 0, 'Product'),
             self::text(64, 660, 700, 60, 'Studio headphones', 36, '#ffffff', 2),
             self::text(64, 730, 400, 50, 'AED 499', 40, '#a1a1aa', 3),
             self::el('qr_code', 720, 680, 300, 300, ['value' => 'https://example.com/product', 'fontSize' => 12], 4, 'Product QR'),
@@ -1797,7 +1798,7 @@ final class CatalogTemplateLibrary
         $tickerY = $height - $tickerHeight;
 
         return self::canvas('#0c4a6e', [
-            self::image(0, 0, $width, $heroHeight, '/images/catalog/portrait-ceo-message.jpg', 0, 'Executive photo'),
+            self::image(0, 0, $width, $heroHeight, '/images/catalog/portrait-ceo-message.svg', 0, 'Executive photo'),
             self::shape(0, 0, $width, $height, '#0c4a6e', 1, 0, 0.72),
             self::text((int) round(48 * $scale), (int) round($height * 0.42), (int) round($width - 96 * $scale), (int) round(50 * $scale), 'Leadership message', (int) round(24 * $scale), '#7dd3fc', 2),
             self::text((int) round(48 * $scale), (int) round($height * 0.47), (int) round($width - 96 * $scale), (int) round(120 * $scale), 'Thank you for showing up with care', (int) round(48 * $scale), '#ffffff', 3),
@@ -1823,7 +1824,7 @@ final class CatalogTemplateLibrary
         $qrSize = (int) round(min(360 * $scale, $width * 0.42));
 
         return self::canvas('#1e3a8a', [
-            self::image(0, 0, $width, $heroHeight, '/images/catalog/portrait-hiring-board.jpg', 0, 'Team photo'),
+            self::image(0, 0, $width, $heroHeight, '/images/catalog/portrait-hiring-board.svg', 0, 'Team photo'),
             self::shape(0, 0, $width, $heroHeight, '#1e3a8a', 1, 0, 0.55),
             self::text((int) round(48 * $scale), (int) round(80 * $scale), (int) round($width - 96 * $scale), (int) round(60 * $scale), 'Now hiring', (int) round(32 * $scale), '#bfdbfe', 2),
             self::text((int) round(48 * $scale), (int) round(160 * $scale), (int) round($width - 96 * $scale), (int) round(160 * $scale), 'Join our team', (int) round(64 * $scale), '#ffffff', 3),
@@ -1846,7 +1847,7 @@ final class CatalogTemplateLibrary
         $tickerY = $height - $tickerHeight;
 
         return self::canvas('#ecfdf5', [
-            self::image(0, 0, $width, (int) round(320 * $scale), '/images/catalog/portrait-patient-info.jpg', 0, 'Clinic photo'),
+            self::image(0, 0, $width, (int) round(320 * $scale), '/images/catalog/portrait-patient-info.svg', 0, 'Clinic photo'),
             self::shape(0, 0, $width, (int) round(320 * $scale), '#ecfdf5', 1, 0, 0.4),
             self::el('alert_banner', (int) round(40 * $scale), (int) round(40 * $scale), (int) round($width - 80 * $scale), (int) round(280 * $scale), [
                 'severity' => 'info',
@@ -1881,7 +1882,7 @@ final class CatalogTemplateLibrary
         $qrSize = (int) round(min(280 * $scale, $width * 0.35));
 
         return self::canvas('#1c1917', [
-            self::image(0, 0, $width, $heroHeight, '/images/catalog/portrait-property-listing.jpg', 0, 'Property photo'),
+            self::image(0, 0, $width, $heroHeight, '/images/catalog/portrait-property-listing.svg', 0, 'Property photo'),
             self::shape(0, $heroHeight, $width, $height - $heroHeight, '#1c1917', 1),
             self::text((int) round(48 * $scale), $heroHeight + (int) round(40 * $scale), (int) round($width - 96 * $scale), (int) round(120 * $scale), 'Harbor View Residence', (int) round(44 * $scale), '#ffffff', 2),
             self::el('table', (int) round(48 * $scale), $heroHeight + (int) round(180 * $scale), (int) round($width - 96 * $scale), (int) round($height * 0.28), [
@@ -1909,7 +1910,7 @@ final class CatalogTemplateLibrary
         $heroHeight = (int) round($height * 0.28);
 
         return self::canvas('#14532d', [
-            self::image(0, 0, $width, $heroHeight, '/images/catalog/portrait-hotel-amenities.jpg', 0, 'Hotel photo'),
+            self::image(0, 0, $width, $heroHeight, '/images/catalog/portrait-hotel-amenities.svg', 0, 'Hotel photo'),
             self::shape(0, 0, $width, $heroHeight, '#14532d', 1, 0, 0.55),
             self::text((int) round(48 * $scale), (int) round(56 * $scale), (int) round($width - 96 * $scale), (int) round(70 * $scale), 'Guest services', (int) round(40 * $scale), '#dcfce7', 2),
             self::el('table', (int) round(48 * $scale), $heroHeight + (int) round(40 * $scale), (int) round($width - 96 * $scale), $tickerY - $heroHeight - (int) round(60 * $scale), [
@@ -1934,7 +1935,7 @@ final class CatalogTemplateLibrary
         $headerHeight = (int) round(280 * $scale);
 
         return self::canvas('#111827', [
-            self::image(0, 0, $width, $headerHeight, '/images/catalog/portrait-kpi-stack.jpg', 0, 'Workplace photo'),
+            self::image(0, 0, $width, $headerHeight, '/images/catalog/portrait-kpi-stack.svg', 0, 'Workplace photo'),
             self::shape(0, 0, $width, $headerHeight, '#111827', 1, 0, 0.55),
             self::text((int) round(48 * $scale), (int) round(48 * $scale), (int) round($width - 96 * $scale), (int) round(60 * $scale), 'Metrics', (int) round(36 * $scale), '#ffffff', 2),
             self::el('date', (int) round(48 * $scale), (int) round(120 * $scale), (int) round(400 * $scale), (int) round(60 * $scale), [
@@ -1969,7 +1970,7 @@ final class CatalogTemplateLibrary
         $heroHeight = (int) round($height * 0.28);
 
         return self::canvas('#0f172a', [
-            self::image(0, 0, $width, $heroHeight, '/images/catalog/portrait-sponsor-list.jpg', 0, 'Event photo'),
+            self::image(0, 0, $width, $heroHeight, '/images/catalog/portrait-sponsor-list.svg', 0, 'Event photo'),
             self::shape(0, 0, $width, $heroHeight, '#0f172a', 1, 0, 0.55),
             self::text((int) round(48 * $scale), (int) round(48 * $scale), (int) round($width - 96 * $scale), (int) round(60 * $scale), 'Our partners', (int) round(36 * $scale), '#ffffff', 2),
             self::el('social_wall', (int) round(48 * $scale), $heroHeight + (int) round(24 * $scale), (int) round($width - 96 * $scale), $tickerY - $heroHeight - (int) round(40 * $scale), [

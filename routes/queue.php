@@ -4,6 +4,7 @@ use App\Http\Controllers\Queue\QueueAppointmentController;
 use App\Http\Controllers\Queue\QueueCounterController;
 use App\Http\Controllers\Queue\QueueDisplayController;
 use App\Http\Controllers\Queue\QueueKioskController;
+use App\Http\Controllers\Queue\QueueNotificationSettingsController;
 use App\Http\Controllers\Queue\QueuePageController;
 use App\Http\Controllers\Queue\QueuePriorityController;
 use App\Http\Controllers\Queue\QueueReportController;
@@ -56,6 +57,15 @@ Route::prefix('queue')->name('queue.')->middleware('plan.feature:queue_managemen
     Route::patch('settings/voice', [QueuePageController::class, 'updateVoiceSettings'])->name('settings.voice.update');
     Route::patch('settings/alerts', [QueuePageController::class, 'updateAlertSettings'])->name('settings.alerts.update');
     Route::patch('settings/customer-notifications', [QueuePageController::class, 'updateNotificationRules'])->name('settings.customer-notifications.update');
+    Route::put('settings/notification-channels/{channel}', [QueueNotificationSettingsController::class, 'updateChannel'])
+        ->whereIn('channel', ['sms', 'whatsapp', 'email', 'push'])
+        ->name('settings.notification-channels.update');
+    Route::post('settings/notification-channels/{channel}/test', [QueueNotificationSettingsController::class, 'test'])
+        ->whereIn('channel', ['sms', 'whatsapp', 'email', 'push'])
+        ->middleware('throttle:10,1')
+        ->name('settings.notification-channels.test');
+    Route::put('settings/notification-templates', [QueueNotificationSettingsController::class, 'updateTemplates'])->name('settings.notification-templates.update');
+    Route::post('settings/notification-deliveries/{delivery}/retry', [QueueNotificationSettingsController::class, 'retry'])->name('settings.notification-deliveries.retry');
     Route::post('settings/priorities', [QueuePriorityController::class, 'store'])->name('priorities.store');
     Route::patch('settings/priorities/{queuePriority}', [QueuePriorityController::class, 'update'])->name('priorities.update');
     Route::delete('settings/priorities/{queuePriority}', [QueuePriorityController::class, 'destroy'])->name('priorities.destroy');

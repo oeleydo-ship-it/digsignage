@@ -11,12 +11,16 @@ use App\Enums\TeamPermission;
 use App\Models\ApiToken;
 use App\Models\Channel;
 use App\Models\Design;
+use App\Models\Location;
+use App\Models\MeetingRoom;
 use App\Models\Playlist;
 use App\Models\QueueKiosk;
 use App\Models\Screen;
 use App\Models\Template;
 use App\Models\User;
 use App\Support\ContentWorkflow;
+use App\Support\PlatformSettings;
+use App\Support\ScopedCacheVersion;
 use App\Support\StayOnPageRedirector;
 use App\Support\StorageDisks;
 use App\Widgets\WidgetRegistry;
@@ -32,6 +36,7 @@ use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
@@ -51,6 +56,7 @@ class AppServiceProvider extends ServiceProvider
         ]));
         $this->app->singleton(WidgetRegistry::class);
         $this->app->singleton(StorageDisks::class);
+        $this->app->singleton(PlatformSettings::class);
         $this->app->singleton(BillingGateway::class, function ($app) {
             return config('billing.driver') === 'stripe'
                 ? $app->make(StripeBillingGateway::class)
@@ -73,10 +79,44 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        $this->configurePlatformSettings();
         $this->configureDefaults();
         $this->configureRateLimiting();
         $this->configureContentApprovals();
         $this->configureOrganizationAudits();
+        $this->configureRoomOptionCache();
+    }
+
+    /**
+     * Apply Super admin → General settings over the .env configuration, and
+     * keep long-running queue workers in step when they change.
+     */
+    protected function configurePlatformSettings(): void
+    {
+        $settings = $this->app->make(PlatformSettings::class);
+        $settings->apply();
+
+        Queue::before(fn () => $settings->refreshIfChanged());
+    }
+
+    /**
+     * Refresh the cached room and location pickers of the room widgets
+     * whenever a room or location is added, renamed or removed.
+     */
+    protected function configureRoomOptionCache(): void
+    {
+        $bump = function (Model $model): void {
+            $teamId = $model->getAttribute('team_id');
+
+            if (is_int($teamId)) {
+                ScopedCacheVersion::bump(WidgetRegistry::ROOM_OPTIONS_SCOPE, $teamId);
+            }
+        };
+
+        foreach ([MeetingRoom::class, Location::class] as $model) {
+            $model::saved($bump);
+            $model::deleted($bump);
+        }
     }
 
     /**
@@ -114,6 +154,13 @@ class AppServiceProvider extends ServiceProvider
 
             return Limit::perMinute((int) config('partner.rate_per_minute'))
                 ->by($token instanceof ApiToken ? 'token:'.$token->id : (string) $request->ip());
+        });
+
+        RateLimiter::for('room-booking-form', function (Request $request) {
+            $room = $request->route('meetingRoom');
+            $roomKey = $room instanceof MeetingRoom ? (string) $room->id : (is_string($room) ? $room : 'unknown');
+
+            return Limit::perMinute(6)->by($request->ip().'|'.$roomKey);
         });
 
         RateLimiter::for('queue-kiosk-issue', function (Request $request) {

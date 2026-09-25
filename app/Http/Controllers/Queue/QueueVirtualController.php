@@ -4,19 +4,26 @@ namespace App\Http\Controllers\Queue;
 
 use App\Actions\Queue\CancelQueueTicket;
 use App\Actions\Queue\IssueQueueTicket;
+use App\Enums\QueueNotificationChannel;
 use App\Enums\QueueTicketSource;
 use App\Enums\QueueTicketStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Queue\JoinVirtualQueueRequest;
 use App\Models\Location;
+use App\Models\QueueNotificationRule;
+use App\Models\QueuePushSubscription;
 use App\Models\QueueService;
 use App\Models\QueueTicket;
 use App\Models\Team;
+use App\Services\QueueNotifications\WebPushSender;
+use App\Support\QueueNotificationChannels;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
+use Throwable;
 
 class QueueVirtualController extends Controller
 {
@@ -106,7 +113,102 @@ class QueueVirtualController extends Controller
         return Inertia::render('queue/virtual-ticket', [
             'ticket' => $this->ticketPayload($queueTicket),
             'reverb' => $this->reverbConfig(),
+            'push' => $this->pushPayload($queueTicket),
         ]);
+    }
+
+    /**
+     * Save the customer's browser so ticket updates reach it as push
+     * notifications, even with the page closed.
+     */
+    public function subscribePush(Request $request, QueueTicket $queueTicket): JsonResponse
+    {
+        abort_unless($this->pushPayload($queueTicket)['enabled'], 403, __('Notifications are not available for this ticket.'));
+
+        $data = $request->validate([
+            'endpoint' => ['required', 'url:https', 'max:2000'],
+            'keys.p256dh' => ['required', 'string', 'max:255'],
+            'keys.auth' => ['required', 'string', 'max:255'],
+            'content_encoding' => ['nullable', 'in:aes128gcm,aesgcm'],
+        ]);
+        $endpoint = (string) $data['endpoint'];
+
+        if (! self::isPushService($endpoint)) {
+            throw ValidationException::withMessages(['endpoint' => __('This browser push service is not supported.')]);
+        }
+
+        if (QueuePushSubscription::query()->where('queue_ticket_id', $queueTicket->id)->count() >= 5) {
+            QueuePushSubscription::query()->where('queue_ticket_id', $queueTicket->id)->oldest('id')->first()?->delete();
+        }
+
+        QueuePushSubscription::query()->updateOrCreate(
+            ['queue_ticket_id' => $queueTicket->id, 'endpoint_hash' => hash('sha256', $endpoint)],
+            [
+                'team_id' => $queueTicket->team_id,
+                'endpoint' => $endpoint,
+                'public_key' => (string) data_get($data, 'keys.p256dh'),
+                'auth_token' => (string) data_get($data, 'keys.auth'),
+                'content_encoding' => (string) ($data['content_encoding'] ?? 'aes128gcm'),
+            ],
+        );
+
+        return response()->json(['subscribed' => true]);
+    }
+
+    public function unsubscribePush(Request $request, QueueTicket $queueTicket): JsonResponse
+    {
+        $endpoint = (string) $request->validate(['endpoint' => ['required', 'string', 'max:2000']])['endpoint'];
+
+        QueuePushSubscription::query()
+            ->where('queue_ticket_id', $queueTicket->id)
+            ->where('endpoint_hash', hash('sha256', $endpoint))
+            ->delete();
+
+        return response()->json(['subscribed' => false]);
+    }
+
+    /**
+     * The server sends requests to subscription endpoints, so only accept the
+     * browsers' own push services.
+     */
+    public static function isPushService(string $endpoint): bool
+    {
+        $host = strtolower((string) parse_url($endpoint, PHP_URL_HOST));
+
+        foreach (['fcm.googleapis.com', 'android.googleapis.com', 'updates.push.services.mozilla.com', 'push.services.mozilla.com', 'notify.windows.com', 'push.apple.com'] as $service) {
+            if ($host === $service || str_ends_with($host, '.'.$service)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @return array{enabled: bool, public_key: string|null}
+     */
+    protected function pushPayload(QueueTicket $ticket): array
+    {
+        $active = in_array($ticket->status, [QueueTicketStatus::Waiting, QueueTicketStatus::Called, QueueTicketStatus::Serving], true);
+        $wanted = $active
+            && app(QueueNotificationChannels::class)->canSend($ticket->team_id, QueueNotificationChannel::Push)
+            && QueueNotificationRule::query()
+                ->where('team_id', $ticket->team_id)
+                ->where('channel', QueueNotificationChannel::Push->value)
+                ->where('is_enabled', true)
+                ->exists();
+
+        if (! $wanted) {
+            return ['enabled' => false, 'public_key' => null];
+        }
+
+        try {
+            return ['enabled' => true, 'public_key' => app(WebPushSender::class)->publicKey()];
+        } catch (Throwable $exception) {
+            report($exception);
+
+            return ['enabled' => false, 'public_key' => null];
+        }
     }
 
     public function cancel(

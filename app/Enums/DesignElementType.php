@@ -22,6 +22,7 @@ enum DesignElementType: string
     case Calendar = 'calendar';
     case Table = 'table';
     case Chart = 'chart';
+    case Icon = 'icon';
 
     /**
      * Get the display label for the element type.

@@ -27,7 +27,7 @@ final class BillingCatalog
     public static function plan(PlanKey $key): array
     {
         try {
-            return Cache::rememberForever('billing:plan:'.$key->value, fn () => self::resolvePlan($key));
+            return Cache::rememberForever(self::cacheKey('plan:'.$key->value), fn () => self::resolvePlan($key));
         } catch (\Throwable) {
             // Cache store unavailable (e.g. while migrating): resolve directly.
             return self::resolvePlan($key);
@@ -40,11 +40,22 @@ final class BillingCatalog
     public static function forgetPlanCache(string $key): void
     {
         try {
-            Cache::forget('billing:plan:'.$key);
-            Cache::forget('billing:plans:managed');
+            Cache::forget(self::cacheKey('plan:'.$key));
+            Cache::forget(self::cacheKey('plans:managed'));
         } catch (\Throwable) {
             // Cache store unavailable.
         }
+    }
+
+    /**
+     * Cache keys carry the feature list, so shipping a new plan feature
+     * retires cached plans that were resolved without it.
+     */
+    private static function cacheKey(string $suffix): string
+    {
+        $features = implode(',', array_map(fn (PlanFeature $feature) => $feature->value, PlanFeature::cases()));
+
+        return 'billing:'.substr(md5($features), 0, 8).':'.$suffix;
     }
 
     /**
@@ -168,7 +179,7 @@ final class BillingCatalog
     public static function managedPlans(): array
     {
         try {
-            return Cache::rememberForever('billing:plans:managed', fn () => self::resolveManagedPlans());
+            return Cache::rememberForever(self::cacheKey('plans:managed'), fn () => self::resolveManagedPlans());
         } catch (\Throwable) {
             return self::resolveManagedPlans();
         }

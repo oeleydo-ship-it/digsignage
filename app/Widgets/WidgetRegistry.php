@@ -5,14 +5,27 @@ namespace App\Widgets;
 use App\Enums\DesignElementType;
 use App\Enums\PlanFeature;
 use App\Models\Location;
+use App\Models\MeetingRoom;
 use App\Models\QueueCounter;
 use App\Models\QueueService;
 use App\Models\Team;
+use App\Support\ScopedCacheVersion;
 use App\Support\TeamQuota;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Validation\ValidationException;
 
 class WidgetRegistry
 {
+    /**
+     * Cache version scope for the room widget pickers.
+     */
+    public const ROOM_OPTIONS_SCOPE = 'widget-room-options';
+
+    /**
+     * Widgets backed by room booking data.
+     */
+    public const ROOM_WIDGETS = ['room_status', 'room_board'];
+
     /**
      * @var array<string, Widget>
      */
@@ -107,12 +120,21 @@ class WidgetRegistry
      *
      * @return list<array<string, mixed>>
      */
-    public function toArrayForTeam(?Team $team): array
+    public function toArrayForTeam(?Team $team, bool $withRoomOptions = true): array
     {
         $widgets = $this->toArray();
 
         if ($team === null) {
             return $widgets;
+        }
+
+        if (! $this->quota->allowsFeature($team, PlanFeature::RoomBooking)) {
+            $widgets = array_values(array_filter(
+                $widgets,
+                fn (array $widget) => ! in_array($widget['key'], self::ROOM_WIDGETS, true),
+            ));
+        } elseif ($withRoomOptions) {
+            $widgets = $this->withRoomOptions($widgets, $team);
         }
 
         if (! $this->quota->allowsFeature($team, PlanFeature::QueueManagement)) {
@@ -177,9 +199,87 @@ class WidgetRegistry
         }, $widgets);
     }
 
+    /**
+     * Fill the room and location pickers of the room widgets for this team.
+     *
+     * @param  list<array<string, mixed>>  $widgets
+     * @return list<array<string, mixed>>
+     */
+    protected function withRoomOptions(array $widgets, Team $team): array
+    {
+        $roomWidgets = self::ROOM_WIDGETS;
+
+        if (! array_filter($widgets, fn (array $widget) => in_array($widget['key'], $roomWidgets, true))) {
+            return $widgets;
+        }
+
+        // Shared with every page for the designer; cached so ordinary page
+        // loads do not query rooms and locations. Room or location writes
+        // bump the version (see AppServiceProvider::configureRoomOptionCache).
+        $options = Cache::remember(
+            'widget-room-options:'.$team->id.':'.ScopedCacheVersion::get(self::ROOM_OPTIONS_SCOPE, $team->id),
+            3600,
+            fn () => $this->roomOptions($team),
+        );
+
+        return array_map(function (array $widget) use ($roomWidgets, $options) {
+            if (! in_array($widget['key'], $roomWidgets, true)) {
+                return $widget;
+            }
+
+            $widget['schema'] = array_map(function (array $field) use ($options) {
+                if (isset($options[$field['name']])) {
+                    $field['options'] = $options[$field['name']];
+                }
+
+                return $field;
+            }, $widget['schema']);
+
+            return $widget;
+        }, $widgets);
+    }
+
+    /**
+     * @return array<string, list<array{value: string, label: string}>>
+     */
+    protected function roomOptions(Team $team): array
+    {
+        return [
+            'room_id' => [
+                ['value' => '0', 'label' => __('Choose a room')],
+                ...MeetingRoom::query()
+                    ->forTeam($team)
+                    ->orderBy('name')
+                    ->get(['id', 'name', 'is_active'])
+                    ->map(fn (MeetingRoom $room) => [
+                        'value' => (string) $room->id,
+                        'label' => $room->is_active ? $room->name : $room->name.' ('.__('inactive').')',
+                    ])->all(),
+            ],
+            'location_id' => [
+                ['value' => '0', 'label' => __('All locations')],
+                ...Location::query()
+                    ->forTeam($team)
+                    ->orderBy('path')
+                    ->orderBy('name')
+                    ->get(['id', 'name'])
+                    ->map(fn (Location $location) => [
+                        'value' => (string) $location->id,
+                        'label' => $location->name,
+                    ])->all(),
+            ],
+        ];
+    }
+
     public function availableForTeam(Team $team, string $key): bool
     {
-        return ! str_starts_with($this->canonicalKey($key), 'queue_')
+        $key = $this->canonicalKey($key);
+
+        if (in_array($key, self::ROOM_WIDGETS, true)) {
+            return $this->quota->allowsFeature($team, PlanFeature::RoomBooking);
+        }
+
+        return ! str_starts_with($key, 'queue_')
             || $this->quota->allowsFeature($team, PlanFeature::QueueManagement);
     }
 

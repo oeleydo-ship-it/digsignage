@@ -1,14 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import Konva from 'konva';
-import {
-    Stage,
-    Layer,
-    Group,
-    Rect,
-    Transformer,
-} from 'react-konva';
+import { Stage, Layer, Group, Line, Rect, Transformer } from 'react-konva';
 import { DesignElementContent } from '@/components/design-element';
 import { visibleDesignLayers } from '@/lib/design-layers';
+import { snapToGuides } from '@/lib/designer-guides';
 import { canonicalWidgetKey } from '@/lib/widget-keys';
 import type { DesignDocument, DesignDocumentElement } from '@/types';
 
@@ -54,6 +49,11 @@ function overlayFrame(
     );
 }
 
+type Guides = { vertical: number[]; horizontal: number[] };
+
+/** Snap distance in screen pixels, converted to canvas units by zoom. */
+const GUIDE_SNAP_PIXELS = 6;
+
 type Props = {
     document: DesignDocument;
     zoom: number;
@@ -90,14 +90,20 @@ function CanvasElement({
     onSelect,
     onChange,
     onOverlayFrame,
+    snapThreshold,
+    onGuides,
 }: { element: DesignDocumentElement; selected: boolean } & Omit<
     Props,
     'zoom' | 'selectedId'
 > & {
-    onOverlayFrame?: (id: string, frame: OverlayFrame | null) => void;
-}) {
+        onOverlayFrame?: (id: string, frame: OverlayFrame | null) => void;
+        snapThreshold: number;
+        onGuides: (guides: Guides | null) => void;
+    }) {
     const node = useRef<Konva.Group>(null);
     const transformer = useRef<Konva.Transformer>(null);
+    // A guide snap is more precise than the grid, so it wins on release.
+    const guideSnapped = useRef(false);
     useEffect(() => {
         if (selected && editable && !element.locked && node.current)
             transformer.current?.nodes([node.current]);
@@ -113,20 +119,19 @@ function CanvasElement({
             document.height,
             Math.max(20, element.height * group.scaleY()),
         );
+        const place = (value: number) =>
+            guideSnapped.current
+                ? Math.round(value)
+                : Math.round(value / grid) * grid;
         const x = Math.max(
             0,
-            Math.min(
-                document.width - width,
-                Math.round((group.x() - width / 2) / grid) * grid,
-            ),
+            Math.min(document.width - width, place(group.x() - width / 2)),
         );
         const y = Math.max(
             0,
-            Math.min(
-                document.height - height,
-                Math.round((group.y() - height / 2) / grid) * grid,
-            ),
+            Math.min(document.height - height, place(group.y() - height / 2)),
         );
+        guideSnapped.current = false;
         group.scale({ x: 1, y: 1 });
         group.position({ x: x + width / 2, y: y + height / 2 });
         onChange({
@@ -154,13 +159,58 @@ function CanvasElement({
                 draggable={editable && !element.locked}
                 onMouseDown={() => onSelect(element.id)}
                 onTap={() => onSelect(element.id)}
-                onDragMove={() => {
-                    if (node.current) {
-                        onOverlayFrame?.(
-                            element.id,
-                            readOverlayFrame(node.current, element),
+                onDragMove={(event) => {
+                    const group = node.current;
+
+                    if (!group) {
+                        return;
+                    }
+
+                    if (event.evt.altKey || element.rotation % 360 !== 0) {
+                        // Alt drags freely; rotated boxes have no axis-aligned edges.
+                        guideSnapped.current = false;
+                        onGuides(null);
+                    } else {
+                        const snap = snapToGuides(
+                            {
+                                x: group.x() - element.width / 2,
+                                y: group.y() - element.height / 2,
+                                width: element.width,
+                                height: element.height,
+                            },
+                            visibleDesignLayers(document.elements)
+                                .filter((other) => other.id !== element.id)
+                                .map((other) => ({
+                                    x: other.x,
+                                    y: other.y,
+                                    width: other.width,
+                                    height: other.height,
+                                })),
+                            document,
+                            snapThreshold,
+                        );
+
+                        group.position({
+                            x: snap.x + element.width / 2,
+                            y: snap.y + element.height / 2,
+                        });
+                        guideSnapped.current =
+                            snap.vertical.length > 0 ||
+                            snap.horizontal.length > 0;
+                        onGuides(
+                            guideSnapped.current
+                                ? {
+                                      vertical: snap.vertical,
+                                      horizontal: snap.horizontal,
+                                  }
+                                : null,
                         );
                     }
+
+                    onOverlayFrame?.(
+                        element.id,
+                        readOverlayFrame(group, element),
+                    );
                 }}
                 onTransform={() => {
                     if (node.current) {
@@ -172,6 +222,7 @@ function CanvasElement({
                 }}
                 onDragEnd={() => {
                     persist();
+                    onGuides(null);
                     onOverlayFrame?.(element.id, null);
                 }}
                 onTransformEnd={() => {
@@ -214,6 +265,8 @@ export default function KonvaDesigner(props: Props) {
     const [liveFrames, setLiveFrames] = useState<Record<string, OverlayFrame>>(
         {},
     );
+    const [guides, setGuides] = useState<Guides | null>(null);
+    const guideStroke = Math.max(1, 1 / props.zoom);
 
     return (
         <div
@@ -239,7 +292,8 @@ export default function KonvaDesigner(props: Props) {
                             props.onSelect(null);
                     }}
                     onTouchStart={(e) => {
-                        if (e.target.name() === 'background') props.onSelect(null);
+                        if (e.target.name() === 'background')
+                            props.onSelect(null);
                     }}
                 >
                     <Layer>
@@ -255,6 +309,11 @@ export default function KonvaDesigner(props: Props) {
                                 {...props}
                                 element={element}
                                 selected={props.selectedId === element.id}
+                                snapThreshold={
+                                    GUIDE_SNAP_PIXELS /
+                                    Math.max(0.05, props.zoom)
+                                }
+                                onGuides={setGuides}
                                 onOverlayFrame={(id, frame) => {
                                     setLiveFrames((current) => {
                                         if (frame === null) {
@@ -271,6 +330,26 @@ export default function KonvaDesigner(props: Props) {
                                         return { ...current, [id]: frame };
                                     });
                                 }}
+                            />
+                        ))}
+                        {guides?.vertical.map((x) => (
+                            <Line
+                                key={`v-${x}`}
+                                points={[x, 0, x, props.document.height]}
+                                stroke="#ec4899"
+                                strokeWidth={guideStroke}
+                                dash={[6 * guideStroke, 4 * guideStroke]}
+                                listening={false}
+                            />
+                        ))}
+                        {guides?.horizontal.map((y) => (
+                            <Line
+                                key={`h-${y}`}
+                                points={[0, y, props.document.width, y]}
+                                stroke="#ec4899"
+                                strokeWidth={guideStroke}
+                                dash={[6 * guideStroke, 4 * guideStroke]}
+                                listening={false}
                             />
                         ))}
                     </Layer>
@@ -304,13 +383,21 @@ export default function KonvaDesigner(props: Props) {
                                 height: frame.height,
                                 opacity: element.opacity,
                                 transform: `rotate(${frame.rotation}deg)`,
-                                zIndex: canonicalWidgetKey(element.type) === 'web_page' && isTruthySetting(element.props.fullscreen)
-                                    ? element.zIndex + 1000
-                                    : element.zIndex,
-                                background: ['shape', 'button'].includes(element.type)
+                                zIndex:
+                                    canonicalWidgetKey(element.type) ===
+                                        'web_page' &&
+                                    isTruthySetting(element.props.fullscreen)
+                                        ? element.zIndex + 1000
+                                        : element.zIndex,
+                                background: ['shape', 'button'].includes(
+                                    element.type,
+                                )
                                     ? String(element.props.fill ?? '#2563eb')
                                     : 'transparent',
-                                borderRadius: Math.max(0, Number(element.props.radius ?? 0)),
+                                borderRadius: Math.max(
+                                    0,
+                                    Number(element.props.radius ?? 0),
+                                ),
                             }}
                         >
                             <DesignElementContent

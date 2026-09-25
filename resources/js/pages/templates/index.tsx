@@ -122,9 +122,21 @@ function TemplateCard({
                 })}
                 className="block"
             >
-                <div className="bg-muted relative h-40 w-full overflow-hidden">
+                <div
+                    className="bg-muted relative w-full overflow-hidden"
+                    style={{
+                        // Landscape cards keep the design's own ratio; tall
+                        // layouts are capped so a 9:16 card never towers over
+                        // its row, and letterbox inside that frame instead.
+                        aspectRatio: `${Math.max(width / height, 3 / 4)}`,
+                    }}
+                >
                     {template.document ? (
-                        <CanvasPreview document={template.document} fit />
+                        <CanvasPreview
+                            document={template.document}
+                            fit
+                            staticPreview
+                        />
                     ) : template.has_thumbnail ? (
                         <img
                             src={
@@ -149,7 +161,9 @@ function TemplateCard({
             <div className="space-y-2 p-3">
                 <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0 space-y-1">
-                        <h3 className="truncate font-medium">{template.name}</h3>
+                        <h3 className="truncate font-medium">
+                            {template.name}
+                        </h3>
                         <p className="text-muted-foreground text-xs">
                             {template.category_label} ·{' '}
                             {orientationLabel(width, height)}
@@ -159,9 +173,7 @@ function TemplateCard({
                         {template.platform && (
                             <Badge variant="secondary">Catalog</Badge>
                         )}
-                        <Badge variant="outline">
-                            {template.status_label}
-                        </Badge>
+                        <Badge variant="outline">{template.status_label}</Badge>
                     </div>
                 </div>
                 {template.description ? (
@@ -300,7 +312,9 @@ export default function TemplatesIndex({
             'portrait',
         ];
         const ordered = preferred
-            .map((value) => categories.find((category) => category.value === value))
+            .map((value) =>
+                categories.find((category) => category.value === value),
+            )
             .filter((category): category is Option => category !== undefined);
         const remainder = categories.filter(
             (category) => !preferred.includes(category.value),
@@ -525,14 +539,20 @@ export default function TemplatesIndex({
                                 <Button
                                     key={`${link.url ?? 'null'}-${index}`}
                                     size="sm"
-                                    variant={link.active ? 'default' : 'outline'}
+                                    variant={
+                                        link.active ? 'default' : 'outline'
+                                    }
                                     disabled={!link.url}
                                     onClick={() => {
                                         if (link.url) {
-                                            router.get(link.url, {}, {
-                                                preserveState: true,
-                                                replace: true,
-                                            });
+                                            router.get(
+                                                link.url,
+                                                {},
+                                                {
+                                                    preserveState: true,
+                                                    replace: true,
+                                                },
+                                            );
                                         }
                                     }}
                                     dangerouslySetInnerHTML={{
@@ -665,9 +685,7 @@ export default function TemplatesIndex({
     );
 }
 
-TemplatesIndex.layout = (props: {
-    currentTeam?: { slug: string } | null;
-}) => ({
+TemplatesIndex.layout = (props: { currentTeam?: { slug: string } | null }) => ({
     breadcrumbs: [
         {
             title: 'Dashboard',

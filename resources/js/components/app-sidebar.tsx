@@ -1,7 +1,10 @@
 import { Link, usePage } from '@inertiajs/react';
 import {
     BarChart3,
+    CalendarCheck,
     CalendarClock,
+    Cloud,
+    DoorOpen,
     CalendarDays,
     ConciergeBell,
     Images,
@@ -53,8 +56,9 @@ export function AppSidebar() {
     const dashboardUrl = slug ? dashboard(slug) : '/';
     const queuePermissions = page.props.queuePermissions;
     const canViewQueue = Boolean(queuePermissions?.canViewQueue);
-    const queueHref = (path: string) =>
-        slug ? `/${slug}/queue${path}` : '/';
+    const queueHref = (path: string) => (slug ? `/${slug}/queue${path}` : '/');
+    const bookingPermissions = page.props.bookingPermissions;
+    const teamHref = (path: string) => (slug ? `/${slug}${path}` : '/');
 
     const groups: NavGroup[] = [
         {
@@ -120,92 +124,122 @@ export function AppSidebar() {
                     href: slug ? schedulesIndex(slug) : '/',
                     icon: CalendarClock,
                 },
-                    {
-                        title: 'Emergencies',
-                        href: slug ? `/${slug}/emergencies` : '/',
-                        icon: Megaphone,
-                    },
-                ],
-            },
-            ...(canViewQueue
-                ? [
-                      {
-                          title: 'Queue Management',
-                          items: [
-                              {
-                                  title: 'Overview',
-                                  href: queueHref(''),
-                                  icon: LayoutDashboard,
-                              },
-                              {
-                                  title: 'Live Queue',
-                                  href: queueHref('/live'),
-                                  icon: Radio,
-                              },
-                              {
-                                  title: 'Services',
-                                  href: queueHref('/services'),
-                                  icon: ConciergeBell,
-                              },
-                              {
-                                  title: 'Counters',
-                                  href: queueHref('/counters'),
-                                  icon: PanelTop,
-                              },
-                              {
-                                  title: 'Kiosks',
-                                  href: queueHref('/kiosks'),
-                                  icon: Tablet,
-                              },
-                              {
-                                  title: 'Tickets',
-                                  href: queueHref('/tickets'),
-                                  icon: Ticket,
-                              },
-                              {
-                                  title: 'Appointments',
-                                  href: queueHref('/appointments'),
-                                  icon: CalendarDays,
-                              },
-                              {
-                                  title: 'Displays',
-                                  href: queueHref('/displays'),
-                                  icon: MonitorPlay,
-                              },
-                              ...(queuePermissions?.canViewReports
-                                  ? [
-                                        {
-                                            title: 'Reports',
-                                            href: queueHref('/reports'),
-                                            icon: BarChart3,
-                                        },
-                                    ]
-                                  : []),
-                              ...(queuePermissions?.canManageSettings
-                                  ? [
-                                        {
-                                            title: 'Settings',
-                                            href: queueHref('/settings'),
-                                            icon: SlidersHorizontal,
-                                        },
-                                    ]
-                                  : []),
-                          ],
-                      } satisfies NavGroup,
-                  ]
-                : []),
-            {
-                title: '',
-                className: 'pb-8',
-                items: [
-                    {
-                        title: 'Settings',
-                        href: profileEdit(),
-                        icon: Settings,
-                    },
-                ],
-            },
-        ];
+                {
+                    title: 'Emergencies',
+                    href: slug ? `/${slug}/emergencies` : '/',
+                    icon: Megaphone,
+                },
+            ],
+        },
+        ...(canViewQueue
+            ? [
+                  {
+                      title: 'Queue Management',
+                      items: [
+                          {
+                              title: 'Overview',
+                              href: queueHref(''),
+                              icon: LayoutDashboard,
+                          },
+                          {
+                              title: 'Live Queue',
+                              href: queueHref('/live'),
+                              icon: Radio,
+                          },
+                          {
+                              title: 'Services',
+                              href: queueHref('/services'),
+                              icon: ConciergeBell,
+                          },
+                          {
+                              title: 'Counters',
+                              href: queueHref('/counters'),
+                              icon: PanelTop,
+                          },
+                          {
+                              title: 'Kiosks',
+                              href: queueHref('/kiosks'),
+                              icon: Tablet,
+                          },
+                          {
+                              title: 'Tickets',
+                              href: queueHref('/tickets'),
+                              icon: Ticket,
+                          },
+                          {
+                              title: 'Appointments',
+                              href: queueHref('/appointments'),
+                              icon: CalendarDays,
+                          },
+                          {
+                              title: 'Displays',
+                              href: queueHref('/displays'),
+                              icon: MonitorPlay,
+                          },
+                          ...(queuePermissions?.canViewReports
+                              ? [
+                                    {
+                                        title: 'Reports',
+                                        href: queueHref('/reports'),
+                                        icon: BarChart3,
+                                    },
+                                ]
+                              : []),
+                          ...(queuePermissions?.canManageSettings
+                              ? [
+                                    {
+                                        title: 'Queue Configuration',
+                                        href: queueHref('/settings'),
+                                        icon: SlidersHorizontal,
+                                    },
+                                ]
+                              : []),
+                      ],
+                  } satisfies NavGroup,
+              ]
+            : []),
+        ...(bookingPermissions?.canViewBookings
+            ? [
+                  {
+                      title: 'Room Booking',
+                      items: [
+                          {
+                              title: 'Bookings',
+                              href: teamHref('/bookings'),
+                              icon: CalendarCheck,
+                          },
+                          {
+                              title: 'Rooms',
+                              href: teamHref('/rooms'),
+                              icon: DoorOpen,
+                          },
+                          ...(bookingPermissions.canManageRooms
+                              ? [
+                                    {
+                                        title: 'Microsoft 365',
+                                        href: teamHref(
+                                            '/integrations/microsoft-365',
+                                        ),
+                                        icon: Cloud,
+                                    },
+                                ]
+                              : []),
+                      ],
+                  } satisfies NavGroup,
+              ]
+            : []),
+        {
+            title: '',
+            className: 'pb-8',
+            items: [
+                {
+                    title: 'Settings',
+                    href: profileEdit(),
+                    icon: Settings,
+                },
+            ],
+        },
+    ];
 
     return (
         <Sidebar collapsible="icon" variant="sidebar">

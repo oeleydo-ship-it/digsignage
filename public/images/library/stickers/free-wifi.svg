@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 160" width="560" height="160" role="img" aria-label="Free Wi-Fi pill">
+  <rect x="0" y="0" width="560" height="160" rx="80" fill="#0ea5e9"/>
+  <g transform="translate(92 86)" fill="none" stroke="#ffffff" stroke-width="12" stroke-linecap="round">
+    <path d="M-52 -18 A74 74 0 0 1 52 -18"/>
+    <path d="M-32 6 A44 44 0 0 1 32 6"/>
+    <circle cx="0" cy="30" r="6" fill="#ffffff" stroke="none"/>
+  </g>
+  <text x="340" y="104" text-anchor="middle" font-family="'Open Sans','Segoe UI',Arial,sans-serif" font-size="64" font-weight="800" fill="#ffffff">FREE WI-FI</text>
+</svg>

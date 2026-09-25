@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="400" height="400" role="img" aria-label="% off burst">
+  <polygon points="392,200 356.9,231.2 377.4,273.5 333,288.9 335.8,335.8 288.9,333 273.5,377.4 231.2,356.9 200,392 168.8,356.9 126.5,377.4 111.1,333 64.2,335.8 67,288.9 22.6,273.5 43.1,231.2 8,200 43.1,168.8 22.6,126.5 67,111.1 64.2,64.2 111.1,67 126.5,22.6 168.8,43.1 200,8 231.2,43.1 273.5,22.6 288.9,67 335.8,64.2 333,111.1 377.4,126.5 356.9,168.8" fill="#f59e0b"/>
+  <text x="200" y="222.4" text-anchor="middle" font-family="'Open Sans','Segoe UI',Arial,sans-serif" font-size="104" font-weight="800" fill="#1c1917">50%</text>
+  <text x="200" y="277.6" text-anchor="middle" font-family="'Open Sans','Segoe UI',Arial,sans-serif" font-size="56" font-weight="800" fill="#1c1917">OFF</text>
+</svg>

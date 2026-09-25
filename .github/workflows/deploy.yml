@@ -1,0 +1,169 @@
+name: deploy
+
+# Push a tag such as v1.4.0 (matching the VERSION file) to build a release
+# package, publish it as a GitHub release, and deploy it with zero downtime.
+# The package is also what Super admin → Updates installs from GitHub.
+#
+# Server deploy is skipped until the repository variable DEPLOY_HOST is set.
+# See docs/deployment.md for the variables and secrets it reads.
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing tag to package and deploy, e.g. v1.4.0'
+        required: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.meta.outputs.tag }}
+      version: ${{ steps.meta.outputs.version }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+          persist-credentials: false
+
+      - name: Read version
+        id: meta
+        env:
+          INPUT_TAG: ${{ inputs.tag }}
+        run: |
+          TAG="${INPUT_TAG:-$GITHUB_REF_NAME}"
+          VERSION="${TAG#v}"
+          FILE_VERSION="$(tr -d '[:space:]' < VERSION)"
+          if [ "$FILE_VERSION" != "$VERSION" ]; then
+            echo "::error::Tag $TAG does not match VERSION ($FILE_VERSION). Bump VERSION before tagging."
+            exit 1
+          fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2
+        with:
+          php-version: '8.4'
+          tools: composer:v2
+          extensions: zip
+          coverage: none
+
+      - name: Setup Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+
+      - name: Build assets
+        run: |
+          composer install --no-interaction --prefer-dist --no-progress
+          cp .env.example .env
+          php artisan key:generate --no-interaction
+          npm ci --no-audit --no-fund
+          npm run build
+
+      - name: Install production dependencies
+        run: composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist --no-progress
+
+      - name: Write release notes
+        env:
+          VERSION: ${{ steps.meta.outputs.version }}
+        run: |
+          awk -v version="$VERSION" '
+            /^## / { if (found) exit; if (index($0, "[" version "]") || index($0, " " version)) { found = 1; next } }
+            found { print }
+          ' CHANGELOG.md > release-notes.md
+          if [ ! -s release-notes.md ]; then
+            echo "Release $VERSION" > release-notes.md
+          fi
+
+      - name: Package
+        env:
+          VERSION: ${{ steps.meta.outputs.version }}
+        run: |
+          PACKAGE="digsignage-$VERSION.zip"
+          zip -qr "$PACKAGE" . \
+            -x '.git/*' '.github/*' 'node_modules/*' 'tests/*' \
+               '.env' 'storage/*' 'bootstrap/cache/*.php' \
+               'release-notes.md' 'digsignage-*.zip'
+          sha256sum "$PACKAGE" > "$PACKAGE.sha256"
+          ls -lh "$PACKAGE"
+
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.meta.outputs.tag }}
+          VERSION: ${{ steps.meta.outputs.version }}
+        run: |
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" "digsignage-$VERSION.zip" "digsignage-$VERSION.zip.sha256" --clobber
+          else
+            gh release create "$TAG" "digsignage-$VERSION.zip" "digsignage-$VERSION.zip.sha256" \
+              --title "DigSignage $VERSION" \
+              --notes-file release-notes.md \
+              --verify-tag
+          fi
+
+  deploy:
+    needs: package
+    if: ${{ vars.DEPLOY_HOST != '' }}
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Download package
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.package.outputs.tag }}
+        run: gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern 'digsignage-*.zip'
+
+      - name: Configure SSH
+        env:
+          SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+
+      - name: Upload and switch
+        env:
+          HOST: ${{ vars.DEPLOY_HOST }}
+          USER: ${{ vars.DEPLOY_USER }}
+          PORT: ${{ vars.DEPLOY_PORT || '22' }}
+          BASE: ${{ vars.DEPLOY_PATH }}
+          REMOTE_PHP: ${{ vars.DEPLOY_PHP || 'php' }}
+          TAG: ${{ needs.package.outputs.tag }}
+          VERSION: ${{ needs.package.outputs.version }}
+        run: |
+          PACKAGE="digsignage-$VERSION.zip"
+          SSH="ssh -i $HOME/.ssh/deploy_key -p $PORT -o BatchMode=yes"
+
+          $SSH "$USER@$HOST" "mkdir -p '$BASE/packages'"
+          scp -i ~/.ssh/deploy_key -P "$PORT" -o BatchMode=yes "$PACKAGE" "$USER@$HOST:$BASE/packages/$PACKAGE"
+
+          $SSH "$USER@$HOST" bash -s -- "$BASE" "$VERSION" "$PACKAGE" "$TAG" "$REMOTE_PHP" <<'REMOTE'
+          set -Eeuo pipefail
+          BASE="$1"; VERSION="$2"; PACKAGE="$3"; TAG="$4"; PHP="$5"
+          RELEASE="$BASE/releases/$VERSION-$(date +%Y%m%d%H%M%S)"
+
+          mkdir -p "$RELEASE"
+          unzip -q "$BASE/packages/$PACKAGE" -d "$RELEASE"
+          rm -f "$BASE/packages/$PACKAGE"
+
+          DEPLOY_BASE_PATH="$BASE" DEPLOY_PHP="$PHP" bash "$RELEASE/scripts/deploy/release.sh" "$RELEASE"
+          "$PHP" "$BASE/current/artisan" releases:record "$VERSION" --path="$RELEASE" --ref="$TAG"
+          REMOTE

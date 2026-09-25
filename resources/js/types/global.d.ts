@@ -7,6 +7,7 @@ import type { EmergencyPermissions } from '@/types/emergency';
 import type { MediaPermissions } from '@/types/media';
 import type { PlaylistPermissions } from '@/types/playlist';
 import type { QueuePermissions } from '@/types/queue';
+import type { BookingPermissions } from '@/types/booking';
 import type {
     ImpersonationState,
     PlatformAnnouncement,
@@ -27,6 +28,15 @@ declare module '@inertiajs/core' {
     export interface InertiaConfig {
         sharedPageProps: {
             name: string;
+            branding?: {
+                logo_url: string | null;
+                favicon_url: string | null;
+                logo_tone: 'original' | 'white' | 'black';
+                show_name: boolean;
+                support_email: string | null;
+                terms_url: string | null;
+                privacy_url: string | null;
+            };
             auth: Auth;
             sidebarOpen: boolean;
             currentTeam: Team | null;
@@ -40,6 +50,7 @@ declare module '@inertiajs/core' {
             schedulePermissions: SchedulePermissions | null;
             emergencyPermissions: EmergencyPermissions | null;
             queuePermissions: QueuePermissions | null;
+            bookingPermissions: BookingPermissions | null;
             billingPermissions: BillingPermissions | null;
             canViewAuditLogs: boolean;
             unreadNotifications: number;

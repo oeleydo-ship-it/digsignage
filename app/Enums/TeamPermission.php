@@ -86,4 +86,9 @@ enum TeamPermission: string
     case ManageQueueAppointments = 'appointments:manage';
     case ViewQueueReports = 'queue-reports:view';
     case ManageQueueSettings = 'queue-settings:manage';
+
+    case ViewBookings = 'booking:view';
+    case CreateBooking = 'booking:create';
+    case ManageBookings = 'booking:manage';
+    case ManageRooms = 'rooms:manage';
 }

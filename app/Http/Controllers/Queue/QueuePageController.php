@@ -26,6 +26,7 @@ use App\Models\Design;
 use App\Models\Location;
 use App\Models\Playlist;
 use App\Models\QueueCounter;
+use App\Models\QueueNotificationDelivery;
 use App\Models\QueueNotificationRule;
 use App\Models\QueuePriority;
 use App\Models\QueueService;
@@ -33,6 +34,8 @@ use App\Models\QueueSetting;
 use App\Models\QueueTicket;
 use App\Models\Screen;
 use App\Support\QueueBoardPresets;
+use App\Support\QueueNotificationChannels;
+use App\Support\QueueNotificationTemplates;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -243,7 +246,7 @@ class QueuePageController extends Controller
             ]);
 
         return $this->page($request, 'queue/settings', [
-            'title' => 'Settings',
+            'title' => 'Queue Configuration',
             'priorities' => $priorities,
             'starvation' => $starvation->toArray(),
             'alerts' => $alerts->toArray(),
@@ -255,6 +258,32 @@ class QueuePageController extends Controller
                 'appointment_minutes_before' => (int) ($appointmentNotificationRule === null
                     ? 60
                     : ($appointmentNotificationRule->minutes_before ?? 60)),
+                'providers' => app(QueueNotificationChannels::class)->forPage($team),
+                'templates' => app(QueueNotificationTemplates::class)->all($team->id),
+                'default_templates' => QueueNotificationTemplates::defaults(),
+                'placeholders' => QueueNotificationTemplates::PLACEHOLDERS,
+                'deliveries' => QueueNotificationDelivery::query()
+                    ->where('team_id', $team->id)
+                    ->with('ticket:id,number')
+                    ->latest('id')
+                    ->limit(30)
+                    ->get()
+                    ->map(fn (QueueNotificationDelivery $delivery) => [
+                        'id' => $delivery->id,
+                        'event' => $delivery->event->label(),
+                        'channel' => $delivery->channel->value,
+                        'channel_label' => $delivery->channel->label(),
+                        'destination' => $delivery->channel === QueueNotificationChannel::Push
+                            ? __('Customer browser')
+                            : $delivery->destination,
+                        'ticket' => $delivery->ticket?->number,
+                        'status' => $delivery->status,
+                        'error' => $delivery->error,
+                        'attempts' => $delivery->attempts,
+                        'created_at' => $delivery->created_at?->toIso8601String(),
+                        'sent_at' => $delivery->sent_at?->toIso8601String(),
+                    ]),
+                'webhook_signature_header' => 'X-Signature',
             ],
             'strategies' => collect(QueueStrategy::cases())->map(fn (QueueStrategy $strategy) => [
                 'value' => $strategy->value,

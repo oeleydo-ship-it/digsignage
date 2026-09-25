@@ -13,14 +13,45 @@ import type { PlayerManifest } from './player-runtime';
 import type { PlayerQueueUpdate } from './player-echo';
 
 const update = {
-    team_id: 1, service_id: 7, ticket_id: 12, ticket_number: 'A105', status: 'called',
-    counter_id: 4, location_id: 3, counter_name: 'Counter 4', called_at: '2026-09-22T10:00:00Z',
-    voice: { enabled: true, languages: ['en-US'], voice: null, speed: 1, volume: 1, repeat_count: 1, chime: true, announcement_delay_seconds: 1 },
+    team_id: 1,
+    service_id: 7,
+    ticket_id: 12,
+    ticket_number: 'A105',
+    status: 'called',
+    counter_id: 4,
+    location_id: 3,
+    counter_name: 'Counter 4',
+    called_at: '2026-09-22T10:00:00Z',
+    voice: {
+        enabled: true,
+        languages: ['en-US'],
+        voice: null,
+        speed: 1,
+        volume: 1,
+        repeat_count: 1,
+        chime: true,
+        announcement_delay_seconds: 1,
+    },
 } satisfies PlayerQueueUpdate;
 
-function manifest(settings: Record<string, string | number | boolean>): PlayerManifest {
+function manifest(
+    settings: Record<string, string | number | boolean>,
+): PlayerManifest {
     return {
-        playback: { playlist: { items: [{ widget: { key: 'queue_now_serving', settings, data: {} } }] }, zones: [] },
+        playback: {
+            playlist: {
+                items: [
+                    {
+                        widget: {
+                            key: 'queue_now_serving',
+                            settings,
+                            data: {},
+                        },
+                    },
+                ],
+            },
+            zones: [],
+        },
     } as unknown as PlayerManifest;
 }
 
@@ -70,8 +101,9 @@ afterEach(() => {
 
 describe('queue voice announcements', () => {
     it('spells ticket digits and avoids duplicating the counter label', () => {
-        expect(announcementText('A105', 'Counter 4', 'en-US'))
-            .toBe('Ticket A one zero five, please proceed to Counter four.');
+        expect(announcementText('A105', 'Counter 4', 'en-US')).toBe(
+            'Ticket A one zero five, please proceed to Counter four.',
+        );
     });
 
     it('supports Arabic, Tagalog, and Hindi templates', () => {
@@ -81,51 +113,142 @@ describe('queue voice announcements', () => {
     });
 
     it('requires an opted-in widget whose filters match the call', () => {
-        expect(manifestWantsQueueVoice(manifest({ voice: true, service_id: '7', location_id: '3', counter_id: '4' }), update)).toBe(true);
-        expect(manifestWantsQueueVoice(manifest({ voice: false, service_id: '7' }), update)).toBe(false);
-        expect(manifestWantsQueueVoice(manifest({ voice: true, service_id: '8' }), update)).toBe(false);
+        expect(
+            manifestWantsQueueVoice(
+                manifest({
+                    voice: true,
+                    service_id: '7',
+                    location_id: '3',
+                    counter_id: '4',
+                }),
+                update,
+            ),
+        ).toBe(true);
+        // Queue Configuration is the main switch: older designs saved false by
+        // default, and new widgets follow it unless they opt out.
+        expect(
+            manifestWantsQueueVoice(
+                manifest({ voice: false, service_id: '7' }),
+                update,
+            ),
+        ).toBe(true);
+        expect(
+            manifestWantsQueueVoice(
+                manifest({ voice: 'auto', service_id: '7' }),
+                update,
+            ),
+        ).toBe(true);
+        expect(
+            manifestWantsQueueVoice(manifest({ service_id: '7' }), update),
+        ).toBe(true);
+        expect(
+            manifestWantsQueueVoice(
+                manifest({ voice: 'off', service_id: '7' }),
+                update,
+            ),
+        ).toBe(false);
+        expect(
+            manifestWantsQueueVoice(
+                manifest({ voice: true, service_id: '8' }),
+                update,
+            ),
+        ).toBe(false);
     });
 
     it('respects the call sound setting independently of voice', () => {
-        expect(manifestWantsQueueSound(manifest({ sound: true, voice: false, service_id: '7' }), update)).toBe(true);
-        expect(manifestWantsQueueSound(manifest({ sound: false, voice: true, service_id: '7' }), update)).toBe(false);
-        expect(manifestWantsQueueSound(manifest({ sound: true, service_id: '8' }), update)).toBe(false);
+        expect(
+            manifestWantsQueueSound(
+                manifest({ sound: true, voice: false, service_id: '7' }),
+                update,
+            ),
+        ).toBe(true);
+        expect(
+            manifestWantsQueueSound(
+                manifest({ sound: false, voice: true, service_id: '7' }),
+                update,
+            ),
+        ).toBe(false);
+        expect(
+            manifestWantsQueueSound(
+                manifest({ sound: true, service_id: '8' }),
+                update,
+            ),
+        ).toBe(false);
     });
 
     it('announces live calls regardless of clock skew but ignores other status changes', () => {
         expect(shouldAnnounceQueueCall(update)).toBe(true);
-        expect(shouldAnnounceQueueCall({ ...update, status: 'serving', called_at: '2020-01-01T00:00:00Z' })).toBe(true);
-        expect(shouldAnnounceQueueCall({ ...update, status: 'waiting' })).toBe(false);
-        expect(shouldAnnounceQueueCall({ ...update, called_at: 'invalid' })).toBe(false);
+        expect(
+            shouldAnnounceQueueCall({
+                ...update,
+                status: 'serving',
+                called_at: '2020-01-01T00:00:00Z',
+            }),
+        ).toBe(true);
+        expect(shouldAnnounceQueueCall({ ...update, status: 'waiting' })).toBe(
+            false,
+        );
+        expect(
+            shouldAnnounceQueueCall({ ...update, called_at: 'invalid' }),
+        ).toBe(false);
     });
 
     it('plays two bell strikes with decaying overtones without requiring speech synthesis', async () => {
-        const oscillators: Array<{ frequency: { value: number }; start: ReturnType<typeof vi.fn>; stop: ReturnType<typeof vi.fn>; onended: (() => void) | null }> = [];
+        const oscillators: Array<{
+            frequency: { value: number };
+            start: ReturnType<typeof vi.fn>;
+            stop: ReturnType<typeof vi.fn>;
+            onended: (() => void) | null;
+        }> = [];
         class FakeAudioContext {
             currentTime = 0;
             destination = {};
             createOscillator = () => {
                 const oscillator = {
-                    type: 'sine', frequency: { value: 0 }, connect: vi.fn(), start: vi.fn(),
-                    stop: vi.fn(() => queueMicrotask(() => oscillator.onended?.())),
+                    type: 'sine',
+                    frequency: { value: 0 },
+                    connect: vi.fn(),
+                    start: vi.fn(),
+                    stop: vi.fn(() =>
+                        queueMicrotask(() => oscillator.onended?.()),
+                    ),
                     onended: null as (() => void) | null,
                 };
                 oscillators.push(oscillator);
                 return oscillator;
             };
-            createGain = () => ({ gain: {
-                setValueAtTime: vi.fn(), linearRampToValueAtTime: vi.fn(), exponentialRampToValueAtTime: vi.fn(),
-            }, connect: vi.fn() });
+            createGain = () => ({
+                gain: {
+                    setValueAtTime: vi.fn(),
+                    linearRampToValueAtTime: vi.fn(),
+                    exponentialRampToValueAtTime: vi.fn(),
+                },
+                connect: vi.fn(),
+            });
         }
         vi.stubGlobal('AudioContext', FakeAudioContext);
 
-        await new BrowserSpeechVoiceProvider().announce({ ...request('A105'), soundOnly: true });
+        await new BrowserSpeechVoiceProvider().announce({
+            ...request('A105'),
+            soundOnly: true,
+        });
 
         expect(oscillators).toHaveLength(6);
-        expect(oscillators.map((oscillator) => oscillator.frequency.value)).toEqual([
-            784, 784 * 2.01, 784 * 3.93, 587.33, 587.33 * 2.01, 587.33 * 3.93,
+        expect(
+            oscillators.map((oscillator) => oscillator.frequency.value),
+        ).toEqual([
+            784,
+            784 * 2.01,
+            784 * 3.93,
+            587.33,
+            587.33 * 2.01,
+            587.33 * 3.93,
         ]);
-        expect(oscillators.every((oscillator) => oscillator.start.mock.calls.length === 1)).toBe(true);
+        expect(
+            oscillators.every(
+                (oscillator) => oscillator.start.mock.calls.length === 1,
+            ),
+        ).toBe(true);
         expect(oscillators[0].start).toHaveBeenCalledWith(0);
         expect(oscillators[3].start).toHaveBeenCalledWith(0.18);
         expect(oscillators[5].stop).toHaveBeenCalledWith(0.59);
@@ -134,19 +257,38 @@ describe('queue voice announcements', () => {
     it('unlocks and previews the call bell after a user gesture', async () => {
         const started = vi.fn();
         const oscillator = {
-            frequency: { value: 0 }, connect: vi.fn(), start: started,
+            frequency: { value: 0 },
+            connect: vi.fn(),
+            start: started,
             stop: vi.fn(() => queueMicrotask(() => oscillator.onended?.())),
             onended: null as (() => void) | null,
         };
-        const resume = vi.fn(async () => { context.state = 'running'; });
+        const resume = vi.fn(async () => {
+            context.state = 'running';
+        });
         const context = {
-            state: 'suspended', currentTime: 0, destination: {}, resume,
+            state: 'suspended',
+            currentTime: 0,
+            destination: {},
+            resume,
             createOscillator: () => oscillator,
-            createGain: () => ({ gain: {
-                setValueAtTime: vi.fn(), linearRampToValueAtTime: vi.fn(), exponentialRampToValueAtTime: vi.fn(),
-            }, connect: vi.fn() }),
+            createGain: () => ({
+                gain: {
+                    setValueAtTime: vi.fn(),
+                    linearRampToValueAtTime: vi.fn(),
+                    exponentialRampToValueAtTime: vi.fn(),
+                },
+                connect: vi.fn(),
+            }),
         };
-        vi.stubGlobal('AudioContext', class { constructor() { return context; } });
+        vi.stubGlobal(
+            'AudioContext',
+            class {
+                constructor() {
+                    return context;
+                }
+            },
+        );
 
         expect(await new BrowserSpeechVoiceProvider().enableSound()).toBe(true);
         expect(resume).toHaveBeenCalledOnce();
@@ -183,16 +325,22 @@ describe('queue voice announcements', () => {
     it('rings a new ticket immediately even while another announcement is speaking', () => {
         const provider = new ControlledVoiceProvider();
         const chimes: number[] = [];
-        provider.playChime = async (volume) => { chimes.push(volume); };
+        provider.playChime = async (volume) => {
+            chimes.push(volume);
+        };
         const queue = new QueueAnnouncementQueue(provider);
 
         queue.enqueue('1', request('A105'));
         expect(provider.calls).toEqual(['A105']);
         expect(chimes).toEqual([1]);
-        expect(queue.enqueue('2', { ...request('A106'), soundOnly: true })).toBe(true);
+        expect(
+            queue.enqueue('2', { ...request('A106'), soundOnly: true }),
+        ).toBe(true);
         expect(chimes).toEqual([1, 1]);
         expect(provider.calls).toEqual(['A105']);
-        expect(queue.enqueue('2', { ...request('A106'), soundOnly: true })).toBe(false);
+        expect(
+            queue.enqueue('2', { ...request('A106'), soundOnly: true }),
+        ).toBe(false);
         expect(queue.size).toBe(1);
 
         provider.finishNext();
@@ -201,7 +349,9 @@ describe('queue voice announcements', () => {
     it('rings voice calls immediately but keeps their speech serialized', async () => {
         const provider = new ControlledVoiceProvider();
         const chimes: number[] = [];
-        provider.playChime = async (volume) => { chimes.push(volume); };
+        provider.playChime = async (volume) => {
+            chimes.push(volume);
+        };
         const queue = new QueueAnnouncementQueue(provider);
 
         queue.enqueue('1', request('A105', 0));
@@ -210,7 +360,9 @@ describe('queue voice announcements', () => {
         expect(provider.calls).toEqual(['A105']);
 
         provider.finishNext();
-        await vi.waitFor(() => expect(provider.calls).toEqual(['A105', 'A106']));
+        await vi.waitFor(() =>
+            expect(provider.calls).toEqual(['A105', 'A106']),
+        );
         provider.finishNext();
     });
 

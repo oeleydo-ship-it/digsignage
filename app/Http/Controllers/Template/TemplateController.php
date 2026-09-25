@@ -17,6 +17,7 @@ use App\Support\CatalogTemplateLibrary;
 use App\Support\ContentApprovalPresenter;
 use App\Support\DesignDocument;
 use App\Support\EnsureCatalogTemplates;
+use App\Support\OpaqueProp;
 use App\Widgets\WidgetRegistry;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -175,11 +176,11 @@ class TemplateController extends Controller
             'template' => [
                 'id' => $template->id,
                 'name' => $template->name,
-                'document' => app(HydrateDocumentWidgets::class)->handle(
+                'document' => OpaqueProp::from(app(HydrateDocumentWidgets::class)->handle(
                     $request->user()->currentTeam,
                     $template->normalizedDocument(),
                     $request->string('timezone')->toString() ?: 'UTC',
-                ),
+                )),
             ],
         ]);
     }
@@ -195,7 +196,7 @@ class TemplateController extends Controller
         return Inertia::render('templates/edit', [
             'template' => [
                 ...$this->listPayload($template),
-                'document' => $template->normalizedDocument(),
+                'document' => OpaqueProp::from($template->normalizedDocument()),
             ],
             'elementTypes' => app(WidgetRegistry::class)->designerElementTypes($request->user()->currentTeam),
             'categories' => collect(TemplateCategory::cases())->map(fn (TemplateCategory $item) => [
@@ -346,7 +347,7 @@ class TemplateController extends Controller
                 ? $template->previewUrl($teamSlug)
                 : null,
             'document' => $template->isPlatform() || ! $hasThumbnail
-                ? $template->normalizedDocument()
+                ? OpaqueProp::from($template->normalizedDocument())
                 : null,
             'updated_at' => $template->updated_at?->toIso8601String(),
         ];
